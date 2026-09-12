@@ -80,7 +80,7 @@
             <h3 class="modal-title">Instagram 配置中心</h3>
             <p style="font-size:12px; color:#888; margin-top:-10px; margin-bottom:15px;">专属配置已隔离，不会与 Twitter/TikTok 产生覆盖。</p>
             
-            <div class="form-group"><label>Instagram RapidAPI Key</label><input type="password" id="cfgRapidKey" placeholder="例如 a52da3c..."></div>
+            <div class="form-group"><label>Instagram RapidAPI Key</label><input type="password" id="cfgRapidKey" placeholder="在此粘贴你的 RapidAPI Key"></div>
             <div class="form-group"><label>Instagram RapidAPI Host</label><input type="text" id="cfgRapidHost" placeholder="instagram-scraper-ai1.p.rapidapi.com"></div>
             
             <div style="border-top:1px dashed #ddd; margin: 15px 0;"></div>
@@ -311,12 +311,29 @@
             } catch(e) {}
         }
 
-        // ================= Instagram Shortcode 提取器 =================
+        // ================= Instagram 核心算法：Shortcode 与 Media ID 互转 =================
         function extractInstagramShortcode(url) {
-            const match = url.match(/(?:p|reel|reels)\/([A-Za-z0-9_-]+)/);
+            const match = url.match(/(?:p|reel|reels|share\/reel|share\/p)\/([A-Za-z0-9_-]+)/);
             if (match && match[1]) return match[1];
-            if (/^[A-Za-z0-9_-]{9,15}$/.test(url.trim())) return url.trim();
+            if (/^[A-Za-z0-9_-]{8,15}$/.test(url.trim())) return url.trim();
             return null;
+        }
+
+        // 官方原生算法：无需网络请求，毫秒级将 shortcode 还原为纯数字 media_id
+        function shortcodeToMediaId(shortcode) {
+            try {
+                const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+                let id = BigInt(0);
+                for (let i = 0; i < shortcode.length; i++) {
+                    const char = shortcode[i];
+                    const index = alphabet.indexOf(char);
+                    if (index === -1) return null;
+                    id = id * BigInt(64) + BigInt(index);
+                }
+                return id.toString();
+            } catch(e) {
+                return null;
+            }
         }
 
         document.getElementById('insUrlInput').addEventListener('keypress', async function (e) {
@@ -347,15 +364,17 @@
                 this.disabled = true;
 
                 try {
-                    // 1. 获取帖子详情（基于 /media_info_from_shortcode/v1/ 端点）
+                    // 1. 优先通过算法计算出 media_id (零误差保底)
+                    let mediaId = shortcodeToMediaId(shortcode);
+
                     let postTitle = `Instagram Post (${shortcode})`;
                     let postChannel = "@instagram_user";
                     let postThumb = "https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png";
                     let postUrl = `https://www.instagram.com/p/${shortcode}/`;
-                    let mediaId = null;
 
+                    // 2. 调用精确的【media_info_from_shortcode/v2】端点获取封面、标题和官方 pk
                     try {
-                        const pRes = await fetch(`https://${rapidHost}/media_info_from_shortcode/v1/?shortcode=${shortcode}&raw=true`, {
+                        const pRes = await fetch(`https://${rapidHost}/media_info_from_shortcode/v2/?shortcode-v2=${shortcode}`, {
                             headers: { 'x-rapidapi-host': rapidHost, 'x-rapidapi-key': rapidKey }
                         });
                         if (pRes.ok) {
@@ -363,7 +382,9 @@
                             const item = pData.items ? pData.items[0] : (pData.data || pData);
                             const node = (item && item.node) ? item.node : item;
                             if (node) {
-                                mediaId = node.id || node.pk || (node.id && String(node.id).split('_')[0]);
+                                if (node.id || node.pk) {
+                                    mediaId = String(node.pk || node.id).split('_')[0];
+                                }
                                 if (node.caption) {
                                     postTitle = typeof node.caption === 'string' ? node.caption : (node.caption.text || postTitle);
                                 } else if (node.title) {
@@ -380,16 +401,16 @@
                             }
                         }
                     } catch(err) {
-                        console.warn("获取帖子信息失败，尝试继续获取评论:", err);
+                        console.warn("详情接口受阻，直接使用算法计算的 mediaId 抓取评论:", err);
                     }
 
                     loadingBar.style.width = '55%';
 
-                    // 2. 获取评论（基于 /media/comments/ 端点）
                     if (!mediaId) {
-                        throw new Error(`未能从 Shortcode (${shortcode}) 解析出对应的 Media ID，请检查帖子链接是否公开可用！`);
+                        throw new Error(`未能获取到该贴文的 Media ID，请检查链接是否有效！`);
                     }
 
+                    // 3. 调用精确的【/media/comments/】端点
                     const cleanMediaId = String(mediaId).split('_')[0];
                     const cRes = await fetch(`https://${rapidHost}/media/comments/?media_id=${cleanMediaId}`, {
                         headers: { 'x-rapidapi-host': rapidHost, 'x-rapidapi-key': rapidKey }
@@ -397,13 +418,13 @@
                     if (!cRes.ok) throw new Error(`RapidAPI 获取评论失败 (状态码: ${cRes.status})`);
                     const cData = await cRes.json();
                     
-                    // 兼容各类返回的评论列表结构
                     let rawComments = [];
                     if (Array.isArray(cData)) rawComments = cData;
-                    else if (cData.comments) rawComments = cData.comments;
+                    else if (cData.comments && Array.isArray(cData.comments)) rawComments = cData.comments;
+                    else if (cData.data && Array.isArray(cData.data)) rawComments = cData.data;
                     else if (cData.data && cData.data.comments) rawComments = cData.data.comments;
                     else if (cData.data && cData.data.items) rawComments = cData.data.items;
-                    else if (cData.items) rawComments = cData.items;
+                    else if (cData.items && Array.isArray(cData.items)) rawComments = cData.items;
 
                     let comments = [];
                     for (let c of rawComments) {
@@ -534,7 +555,7 @@
                             <div class="bubble card-text">${escapeHTML(c.text)}<span class="anno-toggle" title="点击添加/查看批注">🔴</span><span class="ai-toggle" title="AI俚语解析">🤖</span></div>
                             <div class="anno-box" style="display:none;">
                                 <div class="anno-view markdown-body"></div>
-                                <textarea class="anno-edit" style="display:none;" placeholder="在此记录该评论的俚语拆解或灵感..."></textarea>
+                                <textarea class="anno-edit" style="display:none;" placeholder="在此记录该评论的俚语拆解或灵感...">${escapeHTML(c.annotation)}</textarea>
                             </div>
                         </div>
                     </div>
