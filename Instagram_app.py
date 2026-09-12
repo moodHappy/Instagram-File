@@ -1,4 +1,3 @@
-
 import os
 import json
 import base64
@@ -101,7 +100,6 @@ async function fetchGLM(text, apiKey, modelName) {
 async function executeAIPipeline(text) {
     const pref = localStorage.getItem('PREFERRED_AI') || 'groq';
     
-    // 强制清理由于复制粘贴导致的不可见字符或中文空格
     const groqKey = (localStorage.getItem('GROQ_API_KEY') || '').replace(/[^\x20-\x7E]/g, '');
     const glmKey = (localStorage.getItem('GLM_API_KEY') || '').replace(/[^\x20-\x7E]/g, '');
     const customKey = (localStorage.getItem('CUSTOM_API_KEY') || '').replace(/[^\x20-\x7E]/g, '');
@@ -311,7 +309,6 @@ function reconstructSelfHTML() {
 }
 
 async function syncToGitHub() {
-    // 强制净化 Token，防止包含非法字符导致 Fetch Header 报错
     const token = (localStorage.getItem('GH_TOKEN') || '').replace(/[^\x20-\x7E]/g, '');
     const owner = (localStorage.getItem('GH_OWNER') || '').replace(/[^\x20-\x7E]/g, '');
     const repo = 'Instagram-File';
@@ -674,7 +671,6 @@ def generate_index_template():
         initSelects(); forceRender();
 
         async function syncDeleteToGithub(fileRelPath) {
-            // 强制清理非法字符
             const ghToken = (localStorage.getItem('GH_TOKEN') || '').replace(/[^\x20-\x7E]/g, '');
             const ghOwner = (localStorage.getItem('GH_OWNER') || '').replace(/[^\x20-\x7E]/g, '');
             const ghRepo = 'Instagram-File';
@@ -716,27 +712,11 @@ def generate_index_template():
             return null;
         }
 
-        // 短代码转换逻辑 (保留此方法备用，新 API 可能不需要)
-        function shortcodeToMediaId(shortcode) {
-            try {
-                const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
-                let id = BigInt(0);
-                for (let i = 0; i < shortcode.length; i++) {
-                    const char = shortcode[i];
-                    const index = alphabet.indexOf(char);
-                    if (index === -1) return null;
-                    id = id * BigInt(64) + BigInt(index);
-                }
-                return id.toString();
-            } catch(e) { return null; }
-        }
-
         document.getElementById('insUrlInput').addEventListener('keypress', async function (e) {
             if (e.key === 'Enter') {
                 const rawUrl = this.value.trim();
                 if (!rawUrl) return;
 
-                // ============== 关键修复：强制移除所有非法 ISO-8859-1 字符 ==============
                 const rapidKey = (localStorage.getItem('INS_RAPIDAPI_KEY') || '').replace(/[^\x20-\x7E]/g, '');
                 const rapidHost = (localStorage.getItem('INS_RAPIDAPI_HOST') || 'instagram360.p.rapidapi.com').replace(/[^\x20-\x7E]/g, '');
                 const ghToken = (localStorage.getItem('GH_TOKEN') || '').replace(/[^\x20-\x7E]/g, '');
@@ -765,14 +745,15 @@ def generate_index_template():
                     let postThumb = "https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png";
                     let postUrl = `https://www.instagram.com/p/${shortcode}/`;
 
-                    // 根据提供的图片推测获取 Post Detail 的接口名称，如果有误也能走入 catch 分支，不影响主体逻辑
+                    // ============================================
+                    // 核心修改点1：获取 Detail，彻底移除 'Content-Type': 'application/json'
+                    // ============================================
                     try {
                         const pRes = await fetch(`https://${rapidHost}/postdetail/?code_or_url=${shortcode}`, {
                             method: 'GET',
                             headers: { 
                                 'x-rapidapi-host': rapidHost, 
-                                'x-rapidapi-key': rapidKey,
-                                'Content-Type': 'application/json'
+                                'x-rapidapi-key': rapidKey
                             }
                         });
                         
@@ -811,13 +792,14 @@ def generate_index_template():
 
                     loadingBar.style.width = '55%';
 
-                    // 核心修改：直接使用 code_or_url 参数抓取评论
+                    // ============================================
+                    // 核心修改点2：获取 Comments，彻底移除 'Content-Type': 'application/json'
+                    // ============================================
                     const cRes = await fetch(`https://${rapidHost}/postcomments/?code_or_url=${shortcode}`, {
                         method: 'GET',
                         headers: { 
                             'x-rapidapi-host': rapidHost, 
-                            'x-rapidapi-key': rapidKey,
-                            'Content-Type': 'application/json'
+                            'x-rapidapi-key': rapidKey
                         }
                     });
 
@@ -837,7 +819,6 @@ def generate_index_template():
                         const cNode = c.node || c;
                         const text = cNode.text || '';
                         
-                        // ============== 核心修改：利用正则过滤掉纯表情符号/纯符号 ==============
                         if (text && /[\p{L}\p{N}]/u.test(text) && !text.includes('http')) {
                             const user = cNode.user || cNode.owner || {};
                             const authorName = user.username || "ins_user";
@@ -1060,7 +1041,7 @@ def generate_index_template():
     os.makedirs(BASE_DIR, exist_ok=True)
     with open(os.path.join(BASE_DIR, "index.html"), "w", encoding="utf-8") as f:
         f.write(html_template)
-    print("✅ `docs/index.html` API 切换完成！已成功迁移至 instagram360 接口并剥离了无用的 mediaId 校验。")
+    print("✅ `docs/index.html` CORS 跨域问题已修复！成功移除了 GET 请求中导致预检失败的 Content-Type。")
 
 if __name__ == "__main__":
     generate_index_template()
