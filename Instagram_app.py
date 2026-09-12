@@ -32,10 +32,14 @@ const AI_PROMPT = `你是一位精通英语社交网络用语、Instagram/Thread
 请分析以下 Instagram 英文评论，严格按照以下 Markdown 格式输出（不要输出任何废话）：
 
 ### 📌 地道中文翻译
+
 [此处填写结合语境的地道口语化翻译]
 
 ### 📌 俚语与核心表达 (Slang & Expressions)
-- **[单词/俚语/缩写]**   = [中文释义]   （[详细解析：包括缩写还原(如 ngl=not gonna lie, fr=for real)、梗背景或地道使用场景]）
+
+- **[单词/俚语/缩写]**
+  = [中文释义]
+  （[详细解析：包括缩写还原(如 ngl=not gonna lie, fr=for real)、梗背景或地道使用场景]）
 
 评论内容：
 `;
@@ -99,13 +103,16 @@ async function fetchGLM(text, apiKey, modelName) {
 
 async function executeAIPipeline(text) {
     const pref = localStorage.getItem('PREFERRED_AI') || 'groq';
-    const groqKey = localStorage.getItem('GROQ_API_KEY') || '';
-    const glmKey = localStorage.getItem('GLM_API_KEY') || '';
-    const groqModel = localStorage.getItem('GROQ_MODEL') || 'llama-3.3-70b-versatile';
-    const glmModel = localStorage.getItem('GLM_MODEL') || 'GLM-4.5-Flash';
-    const customUrl = localStorage.getItem('CUSTOM_API_URL') || '';
-    const customKey = localStorage.getItem('CUSTOM_API_KEY') || '';
-    const customModel = localStorage.getItem('CUSTOM_MODEL') || '';
+    
+    // 强制清理由于复制粘贴导致的不可见字符或中文空格
+    const groqKey = (localStorage.getItem('GROQ_API_KEY') || '').replace(/[^\x20-\x7E]/g, '');
+    const glmKey = (localStorage.getItem('GLM_API_KEY') || '').replace(/[^\x20-\x7E]/g, '');
+    const customKey = (localStorage.getItem('CUSTOM_API_KEY') || '').replace(/[^\x20-\x7E]/g, '');
+    
+    const groqModel = (localStorage.getItem('GROQ_MODEL') || 'llama-3.3-70b-versatile').trim();
+    const glmModel = (localStorage.getItem('GLM_MODEL') || 'GLM-4.5-Flash').trim();
+    const customUrl = (localStorage.getItem('CUSTOM_API_URL') || '').trim();
+    const customModel = (localStorage.getItem('CUSTOM_MODEL') || '').trim();
 
     if ((!groqKey && !glmKey && !customKey) || (!groqModel && !glmModel && !customModel)) throw new Error('MISSING_KEYS_OR_MODELS');
 
@@ -147,16 +154,15 @@ function initAnnotations() {
             aiToggle.addEventListener('click', async (e) => {
                 e.preventDefault(); e.stopPropagation();
                 if (aiToggle.classList.contains('loading')) return;
-                
+
                 if (edit.value.trim().length > 0) {
                     const confirmOverwrite = confirm('⚠️ 当前已有批注内容，是否重新生成并覆盖？');
                     if (!confirmOverwrite) return;
                 }
-                
-                const groqKey = localStorage.getItem('GROQ_API_KEY') || '';
-                const glmKey = localStorage.getItem('GLM_API_KEY') || '';
-                const customKey = localStorage.getItem('CUSTOM_API_KEY') || '';
 
+                const groqKey = (localStorage.getItem('GROQ_API_KEY') || '').trim();
+                const glmKey = (localStorage.getItem('GLM_API_KEY') || '').trim();
+                const customKey = (localStorage.getItem('CUSTOM_API_KEY') || '').trim();
                 if (!groqKey && !glmKey && !customKey) { alert('⚠️ 请先返回日历配置中心设置 AI API Key！'); return; }
 
                 const pClone = wrap.querySelector('.card-text').cloneNode(true);
@@ -185,20 +191,20 @@ function initAnnotations() {
 
         toggle.addEventListener('click', (e) => {
             e.preventDefault(); e.stopPropagation();
-            if (box.style.display === 'block') { box.style.display = 'none'; }
+            if (box.style.display === 'block') { box.style.display = 'none'; } 
             else {
                 box.style.display = 'block';
-                if (!edit.value.trim()) { view.style.display = 'none'; edit.style.display = 'block'; setTimeout(() => edit.focus(), 50); }
+                if (!edit.value.trim()) { view.style.display = 'none'; edit.style.display = 'block'; setTimeout(() => edit.focus(), 50); } 
                 else { view.style.display = 'block'; edit.style.display = 'none'; }
             }
         });
 
         const triggerEdit = () => { view.style.display = 'none'; edit.style.display = 'block'; setTimeout(() => edit.focus(), 50); };
         view.addEventListener('dblclick', () => { box.style.display = 'none'; });
-        
+
         let lastTap = 0;
         view.addEventListener('touchstart', e => {
-            if (e.touches.length === 2) { triggerEdit(); }
+            if (e.touches.length === 2) { triggerEdit(); } 
             else if (e.touches.length === 1) {
                 const currentTime = new Date().getTime();
                 if (currentTime - lastTap < 500 && currentTime - lastTap > 0) { box.style.display = 'none'; }
@@ -210,15 +216,14 @@ function initAnnotations() {
             const newVal = edit.value.trim();
             try { view.innerHTML = newVal ? renderMarkdown(newVal) : ''; } catch(e){}
             edit.style.display = 'none';
-            if (newVal) { view.style.display = 'block'; toggle.classList.add('has-anno'); }
+            if (newVal) { view.style.display = 'block'; toggle.classList.add('has-anno'); } 
             else { view.style.display = 'none'; box.style.display = 'none'; toggle.classList.remove('has-anno'); }
-            
+
             if (edit.getAttribute('data-old-val') !== newVal) {
                 edit.setAttribute('data-old-val', newVal);
                 scheduleSync();
             }
         });
-
         edit.setAttribute('data-old-val', rawText);
     });
 }
@@ -283,7 +288,6 @@ function reconstructSelfHTML() {
     </div>
     <div class="container">
         <h2 style="text-align: center; margin-bottom: 25px; color: #333;">📅 ${pageData.year}-${String(pageData.month).padStart(2,'0')}-${String(pageData.day).padStart(2,'0')}</h2>
-        
         <div class="post-card">
             <a href="${escapeHTML(pageData.post.url)}" target="_blank"><img src="${escapeHTML(pageData.post.thumb)}" class="post-thumb" alt="Thumbnail"></a>
             <div class="post-info">
@@ -295,9 +299,8 @@ function reconstructSelfHTML() {
                 </div>
             </div>
         </div>
-
         <div class="chat-container">
-            ${comments_html ? comments_html : '<div class="empty-state">暫無高價值評論。</div>'}
+            ${comments_html ? comments_html : '<div class="empty-state">暫无评论。</div>'}
         </div>
     </div>
     <script id="page-data" type="application/json">${newJsonStr}<\/script>
@@ -307,8 +310,9 @@ function reconstructSelfHTML() {
 }
 
 async function syncToGitHub() {
-    const token = localStorage.getItem('GH_TOKEN');
-    const owner = localStorage.getItem('GH_OWNER');
+    // 强制净化 Token，防止包含非法字符导致 Fetch Header 报错
+    const token = (localStorage.getItem('GH_TOKEN') || '').replace(/[^\x20-\x7E]/g, '');
+    const owner = (localStorage.getItem('GH_OWNER') || '').replace(/[^\x20-\x7E]/g, '');
     const repo = 'Instagram-File';
     
     if(!token || !owner) { alert('缺少 GitHub Token，无法同步！'); return; }
@@ -327,17 +331,14 @@ async function syncToGitHub() {
 
     try {
         const base64Html = btoa(encodeURIComponent(pureHtml).replace(/%([0-9A-F]{2})/g, function(match, p1) { return String.fromCharCode('0x' + p1); }));
-        
         const getRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${fileRelPath}?t=${Date.now()}`, { headers: { 'Authorization': `token ${token}` }, cache: 'no-store' });
         if (!getRes.ok) throw new Error('API 获取 SHA 失败');
         const fileData = await getRes.json();
-
         const putRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${fileRelPath}`, {
             method: 'PUT',
             headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
             body: JSON.stringify({ message: `Auto-save annotation`, content: base64Html, sha: fileData.sha })
         });
-
         if(putRes.ok) {
             statusMsg.style.backgroundColor = '#2ea44f'; statusMsg.innerText = '✅ 云端已同步';
             setTimeout(() => { if (statusMsg.innerText === '✅ 云端已同步') statusMsg.style.display = 'none'; }, 3000);
@@ -365,12 +366,12 @@ def generate_index_template():
                             f_year, f_month, f_day = str(int(parts[0])), str(int(parts[1])), str(int(parts[2]))
                             time_str = f"{parts[3][:2]}:{parts[3][2:4]}"
                             file_path = f"{year}/{month}/{file}"
-                            title = "📸 Instagram 贴文精读"
-                            
+                            title = "📸 Instagram 贴文"
+
                             if f_year not in archive_data: archive_data[f_year] = {}
                             if f_month not in archive_data[f_year]: archive_data[f_year][f_month] = {}
                             if f_day not in archive_data[f_year][f_month]: archive_data[f_year][f_month][f_day] = []
-                            
+
                             archive_data[f_year][f_month][f_day].append({
                                 "time": time_str,
                                 "path": file_path,
@@ -389,10 +390,10 @@ def generate_index_template():
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Instagram 潮语精读日历</title>
     <style>
-        :root {
-            --bg: #fafafa; --text: #262626; --muted: #8e8e8e;
+        :root { 
+            --bg: #fafafa; --text: #262626; --muted: #8e8e8e; 
             --primary: #d62976; --ins-gradient: linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%);
-            --border: #dbdbdb; --card: #fff;
+            --border: #dbdbdb; --card: #fff; 
         }
         body, html { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; background: var(--bg); margin: 0; padding: 0; color: var(--text); }
         .container { max-width: 600px; margin: 0 auto; padding-bottom: 20px; }
@@ -417,7 +418,6 @@ def generate_index_template():
         .controls { background: var(--bg); padding: 15px 20px; display: flex; justify-content: center; align-items: center; gap: 8px; border-bottom: 1px solid var(--border); }
         .control-btn { background: var(--ins-gradient); color: #fff; border: none; border-radius: 6px; padding: 8px 12px; font-size: 14px; cursor: pointer; font-weight: bold; }
         .select-box { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 15px; background: #fff; outline: none; font-weight: bold; cursor: pointer; color: #333; }
-        
         .calendar-wrapper { background: var(--card); padding: 15px; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
         .weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; font-weight: bold; font-size: 13px; color: var(--muted); margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #f0f0f0; }
         .days-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
@@ -431,14 +431,14 @@ def generate_index_template():
         .day-cell.has-news .dot { display: block; }
         
         .news-section { padding: 0 15px; }
-        .news-item-wrapper { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-        .news-item { flex: 1; background: var(--card); border-radius: 14px; padding: 18px 16px; display: flex; align-items: center; text-decoration: none; color: var(--text); box-shadow: 0 2px 8px rgba(0,0,0,0.03); border-left: 4px solid var(--primary); }
-        .news-title { font-size: 15px; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: bold; flex: 1; }
+        .news-item-wrapper { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; width: 100%; box-sizing: border-box; }
+        .news-item { flex: 1; min-width: 0; background: var(--card); border-radius: 14px; padding: 16px; display: flex; align-items: center; text-decoration: none; color: var(--text); box-shadow: 0 2px 8px rgba(0,0,0,0.03); border-left: 4px solid var(--primary); overflow: hidden; }
+        .news-title { font-size: 15px; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: bold; display: block; width: 100%; }
         .delete-btn { background: #ff3b30; color: white; border: none; border-radius: 10px; padding: 0 15px; height: 54px; font-size: 16px; cursor: pointer; display: none; }
         
         .empty-state { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px; background: var(--card); border-radius: 14px; }
-        
         #loadingBar { height: 3px; background: var(--ins-gradient); width: 0%; transition: width 0.3s; position: absolute; top: 0; left: 0; z-index: 30; }
+
         .toast-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.45); z-index: 99999; justify-content: center; align-items: center; }
         .toast-card { background: #ffffff; border-radius: 18px; padding: 25px 30px; text-align: center; box-shadow: 0 12px 30px rgba(0,0,0,0.2); max-width: 280px; width: 75%; }
         .toast-icon { font-size: 40px; margin-bottom: 8px; }
@@ -447,6 +447,7 @@ def generate_index_template():
 </head>
 <body>
     <div id="loadingBar"></div>
+
     <div class="toast-overlay" id="toastOverlay">
         <div class="toast-card">
             <div class="toast-icon">✅</div>
@@ -465,7 +466,7 @@ def generate_index_template():
             <p style="font-size:12px; color:#888; margin-top:-10px; margin-bottom:15px;">专属配置已隔离，不会与 Twitter/TikTok 产生覆盖。</p>
             
             <div class="form-group"><label>Instagram RapidAPI Key</label><input type="password" id="cfgRapidKey" placeholder="在此粘贴你的 RapidAPI Key"></div>
-            <div class="form-group"><label>Instagram RapidAPI Host</label><input type="text" id="cfgRapidHost" placeholder="instagram360.p.rapidapi.com"></div>
+            <div class="form-group"><label>Instagram RapidAPI Host</label><input type="text" id="cfgRapidHost" placeholder="instagram-scraper-ai1.p.rapidapi.com"></div>
             
             <div style="border-top:1px dashed #ddd; margin: 15px 0;"></div>
             <div class="form-group"><label>GitHub Personal Access Token</label><input type="password" id="cfgGhToken" placeholder="ghp_..."></div>
@@ -489,8 +490,8 @@ def generate_index_template():
                 <div style="flex:1;"><label>自定义 Key</label><input type="password" id="cfgCustomKey" placeholder="sk-..."></div>
                 <div style="flex:1;"><label>自定义 模型</label><input type="text" id="cfgCustomModel" placeholder="deepseek-chat"></div>
             </div>
-
             <div style="border-top:1px dashed #ddd; margin: 15px 0;"></div>
+
             <div class="form-group" style="display:flex; gap:10px;">
                 <div style="flex:1;"><label>Groq Key</label><input type="password" id="cfgGroq"></div>
                 <div style="flex:1;"><label>Groq 模型</label><input type="text" id="cfgGroqModel" value="llama-3.3-70b-versatile"></div>
@@ -520,12 +521,10 @@ def generate_index_template():
             <button class="control-btn" id="nextBtn">&gt;</button>
             <button class="control-btn" id="todayBtn">今天</button>
         </div>
-
         <div class="calendar-wrapper">
             <div class="weekdays"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
             <div class="days-grid" id="daysGrid"></div>
         </div>
-
         <div class="news-section"><div id="newsList"></div></div>
     </div>
 
@@ -543,7 +542,7 @@ def generate_index_template():
 
         function openConfigModal() {
             document.getElementById('cfgRapidKey').value = localStorage.getItem('INS_RAPIDAPI_KEY') || '';
-            document.getElementById('cfgRapidHost').value = localStorage.getItem('INS_RAPIDAPI_HOST') || 'instagram360.p.rapidapi.com';
+            document.getElementById('cfgRapidHost').value = localStorage.getItem('INS_RAPIDAPI_HOST') || 'instagram-scraper-ai1.p.rapidapi.com';
             document.getElementById('cfgGhToken').value = localStorage.getItem('GH_TOKEN') || '';
             document.getElementById('cfgGhOwner').value = localStorage.getItem('GH_OWNER') || '';
             
@@ -557,33 +556,25 @@ def generate_index_template():
             document.getElementById('cfgGLMModel').value = localStorage.getItem('GLM_MODEL') || 'GLM-4.5-Flash';
             document.getElementById('settingsModal').style.display = 'flex';
         }
+
         function closeConfigModal() { document.getElementById('settingsModal').style.display = 'none'; }
 
         function saveConfigAndNotify(e) {
             if (e) { e.preventDefault(); e.stopPropagation(); }
-            
-            // 确保去除所有非法不可见字符和多余空格
-            const sanitize = str => (str || '').replace(/[^\x20-\x7E]/g, '').trim();
-            
-            localStorage.setItem('INS_RAPIDAPI_KEY', sanitize(document.getElementById('cfgRapidKey').value));
-            
-            // 强制保底机制：如果没有值，或者还是旧版的值，强行写成新的
-            let hostVal = sanitize(document.getElementById('cfgRapidHost').value);
-            if (!hostVal || hostVal.includes('instagram-scraper-ai1')) hostVal = 'instagram360.p.rapidapi.com';
-            localStorage.setItem('INS_RAPIDAPI_HOST', hostVal);
-
-            localStorage.setItem('GH_TOKEN', sanitize(document.getElementById('cfgGhToken').value));
-            localStorage.setItem('GH_OWNER', sanitize(document.getElementById('cfgGhOwner').value));
+            // 写入本地存储前也做一次清理，防手滑
+            localStorage.setItem('INS_RAPIDAPI_KEY', (document.getElementById('cfgRapidKey').value || '').trim().replace(/[^\x20-\x7E]/g, ''));
+            localStorage.setItem('INS_RAPIDAPI_HOST', (document.getElementById('cfgRapidHost').value || '').trim().replace(/[^\x20-\x7E]/g, '') || 'instagram-scraper-ai1.p.rapidapi.com');
+            localStorage.setItem('GH_TOKEN', (document.getElementById('cfgGhToken').value || '').trim().replace(/[^\x20-\x7E]/g, ''));
+            localStorage.setItem('GH_OWNER', (document.getElementById('cfgGhOwner').value || '').trim().replace(/[^\x20-\x7E]/g, ''));
             
             localStorage.setItem('PREFERRED_AI', document.getElementById('cfgPrefAI').value || 'groq');
-            localStorage.setItem('CUSTOM_API_URL', document.getElementById('cfgCustomURL').value.trim());
-            localStorage.setItem('CUSTOM_API_KEY', sanitize(document.getElementById('cfgCustomKey').value));
-            localStorage.setItem('CUSTOM_MODEL', document.getElementById('cfgCustomModel').value.trim());
-            localStorage.setItem('GROQ_API_KEY', sanitize(document.getElementById('cfgGroq').value));
-            localStorage.setItem('GROQ_MODEL', document.getElementById('cfgGroqModel').value.trim());
-            localStorage.setItem('GLM_API_KEY', sanitize(document.getElementById('cfgGLM').value));
-            localStorage.setItem('GLM_MODEL', document.getElementById('cfgGLMModel').value.trim());
-            
+            localStorage.setItem('CUSTOM_API_URL', (document.getElementById('cfgCustomURL').value || '').trim());
+            localStorage.setItem('CUSTOM_API_KEY', (document.getElementById('cfgCustomKey').value || '').trim().replace(/[^\x20-\x7E]/g, ''));
+            localStorage.setItem('CUSTOM_MODEL', (document.getElementById('cfgCustomModel').value || '').trim());
+            localStorage.setItem('GROQ_API_KEY', (document.getElementById('cfgGroq').value || '').trim().replace(/[^\x20-\x7E]/g, ''));
+            localStorage.setItem('GROQ_MODEL', (document.getElementById('cfgGroqModel').value || '').trim());
+            localStorage.setItem('GLM_API_KEY', (document.getElementById('cfgGLM').value || '').trim().replace(/[^\x20-\x7E]/g, ''));
+            localStorage.setItem('GLM_MODEL', (document.getElementById('cfgGLMModel').value || '').trim());
             closeConfigModal();
             popToast('配置已本地保存！', 1200);
         }
@@ -593,9 +584,9 @@ def generate_index_template():
             yearSelect.innerHTML = '';
             const allYears = new Set(Object.keys(archiveData).map(Number));
             for(let i = -5; i <= 50; i++) allYears.add(today.getFullYear() + i);
-            Array.from(allYears).sort((a, b) => b - a).forEach(y => {
-                const opt = document.createElement('option'); opt.value = y; opt.textContent = y + ' 年';
-                yearSelect.appendChild(opt);
+            Array.from(allYears).sort((a, b) => b - a).forEach(y => { 
+                const opt = document.createElement('option'); opt.value = y; opt.textContent = y + ' 年'; 
+                yearSelect.appendChild(opt); 
             });
         }
 
@@ -605,15 +596,15 @@ def generate_index_template():
 
             document.getElementById('yearSelect').value = AppState.year;
             document.getElementById('monthSelect').value = AppState.month;
-            
+
             const daysGrid = document.getElementById('daysGrid');
             const newsList = document.getElementById('newsList');
             daysGrid.innerHTML = ''; newsList.innerHTML = '';
-            
+
             const firstDay = new Date(AppState.year, AppState.month - 1, 1).getDay() || 7;
-            for (let i = 1; i < firstDay; i++) {
-                const emptyCell = document.createElement('div'); emptyCell.className = 'day-cell empty';
-                daysGrid.appendChild(emptyCell);
+            for (let i = 1; i < firstDay; i++) { 
+                const emptyCell = document.createElement('div'); emptyCell.className = 'day-cell empty'; 
+                daysGrid.appendChild(emptyCell); 
             }
             
             const monthData = (archiveData[AppState.year] && archiveData[AppState.year][AppState.month]) || {};
@@ -628,32 +619,31 @@ def generate_index_template():
                 cell.onclick = () => { AppState.day = day; forceRender(); };
                 daysGrid.appendChild(cell);
             }
-            
+
             let dayData = (archiveData[AppState.year] && archiveData[AppState.year][AppState.month] && archiveData[AppState.year][AppState.month][AppState.day]) || null;
             if (dayData && dayData.length > 0) {
                 dayData.forEach((news, index) => {
                     const wrapper = document.createElement('div'); wrapper.className = 'news-item-wrapper';
-                    
                     const a = document.createElement('a'); a.href = news.path; a.className = 'news-item';
                     a.innerHTML = `<span class="news-title" style="color: var(--primary);">${news.title} (${news.time})</span>`;
                     wrapper.appendChild(a);
-                    
+
                     const delBtn = document.createElement('button'); delBtn.className = 'delete-btn'; delBtn.innerHTML = '🗑️';
                     if (AppState.deleteMode) delBtn.style.display = 'block';
                     delBtn.onclick = async (e) => {
                         e.preventDefault();
                         if(confirm('确认删除此条目并同步删除云端文件吗？')) {
-                            const pathToDelete = news.path;
+                            const pathToDelete = news.path; 
                             dayData.splice(index, 1);
                             if (dayData.length === 0) delete archiveData[AppState.year][AppState.month][AppState.day];
-                            forceRender();
+                            forceRender(); 
                             await syncDeleteToGithub(pathToDelete);
                         }
                     };
                     wrapper.appendChild(delBtn); newsList.appendChild(wrapper);
                 });
-            } else {
-                newsList.innerHTML = '<div class="empty-state">当日暂无 Instagram 归档记录 👀</div>';
+            } else { 
+                newsList.innerHTML = '<div class="empty-state">当日暂无 Instagram 归档记录 👀</div>'; 
             }
         }
 
@@ -677,11 +667,11 @@ def generate_index_template():
         initSelects(); forceRender();
 
         async function syncDeleteToGithub(fileRelPath) {
-            const ghToken = localStorage.getItem('GH_TOKEN');
-            const ghOwner = localStorage.getItem('GH_OWNER');
+            // 强制清理非法字符
+            const ghToken = (localStorage.getItem('GH_TOKEN') || '').replace(/[^\x20-\x7E]/g, '');
+            const ghOwner = (localStorage.getItem('GH_OWNER') || '').replace(/[^\x20-\x7E]/g, '');
             const ghRepo = 'Instagram-File';
             if (!ghToken || !ghOwner) return;
-
             try {
                 const targetFilePath = `docs/${fileRelPath}`;
                 const fileRes = await fetch(`https://api.github.com/repos/${ghOwner}/${ghRepo}/contents/${targetFilePath}`, { headers: { 'Authorization': `token ${ghToken}` } });
@@ -693,16 +683,13 @@ def generate_index_template():
                         body: JSON.stringify({ message: `Delete ins file: ${fileRelPath}`, sha: fileData.sha })
                     });
                 }
-
                 const idxRes = await fetch(`https://api.github.com/repos/${ghOwner}/${ghRepo}/contents/docs/index.html`, { headers: { 'Authorization': `token ${ghToken}` } });
                 const idxData = await idxRes.json();
                 const idxContent = decodeURIComponent(escape(atob(idxData.content)));
-                
                 const dataStart = idxContent.indexOf('/*DATA_START*/') + 14;
                 const dataEnd = idxContent.indexOf('/*DATA_END*/');
                 const newJsonStr = JSON.stringify(archiveData);
                 const newIdxContent = idxContent.substring(0, dataStart) + newJsonStr + idxContent.substring(dataEnd);
-                
                 await fetch(`https://api.github.com/repos/${ghOwner}/${ghRepo}/contents/docs/index.html`, {
                     method: 'PUT',
                     headers: { 'Authorization': `token ${ghToken}`, 'Content-Type': 'application/json' },
@@ -718,25 +705,34 @@ def generate_index_template():
             return null;
         }
 
+        function shortcodeToMediaId(shortcode) {
+            try {
+                const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+                let id = BigInt(0);
+                for (let i = 0; i < shortcode.length; i++) {
+                    const char = shortcode[i];
+                    const index = alphabet.indexOf(char);
+                    if (index === -1) return null;
+                    id = id * BigInt(64) + BigInt(index);
+                }
+                return id.toString();
+            } catch(e) {
+                return null;
+            }
+        }
+
         document.getElementById('insUrlInput').addEventListener('keypress', async function (e) {
             if (e.key === 'Enter') {
                 const rawUrl = this.value.trim();
                 if (!rawUrl) return;
 
-                const sanitize = str => (str || '').replace(/[^\x20-\x7E]/g, '').trim();
-
-                const rapidKey = sanitize(localStorage.getItem('INS_RAPIDAPI_KEY'));
-                let rapidHost = sanitize(localStorage.getItem('INS_RAPIDAPI_HOST'));
-                const ghToken = sanitize(localStorage.getItem('GH_TOKEN'));
-                const ghOwner = sanitize(localStorage.getItem('GH_OWNER'));
+                // ============== 关键修复：强制移除所有非法 ISO-8859-1 字符 ==============
+                const rapidKey = (localStorage.getItem('INS_RAPIDAPI_KEY') || '').replace(/[^\x20-\x7E]/g, '');
+                const rapidHost = (localStorage.getItem('INS_RAPIDAPI_HOST') || 'instagram-scraper-ai1.p.rapidapi.com').replace(/[^\x20-\x7E]/g, '');
+                const ghToken = (localStorage.getItem('GH_TOKEN') || '').replace(/[^\x20-\x7E]/g, '');
+                const ghOwner = (localStorage.getItem('GH_OWNER') || '').replace(/[^\x20-\x7E]/g, '');
                 const ghRepo = 'Instagram-File';
                 
-                // 【核心修正】强制覆盖缓存里的旧版 Host，避免产生 404 / CORS 错误
-                if (!rapidHost || rapidHost.includes('instagram-scraper-ai1')) {
-                    rapidHost = 'instagram360.p.rapidapi.com';
-                    localStorage.setItem('INS_RAPIDAPI_HOST', rapidHost);
-                }
-
                 if (!rapidKey || !ghToken || !ghOwner) {
                     alert('⚠️ 请先点击右上角 ⚙️ 配置 Instagram RapidAPI Key 和 GitHub Token！');
                     openConfigModal();
@@ -750,36 +746,34 @@ def generate_index_template():
                 }
 
                 const loadingBar = document.getElementById('loadingBar');
-                loadingBar.style.width = '20%';
+                loadingBar.style.width = '20%'; 
                 this.disabled = true;
 
                 try {
+                    let mediaId = shortcodeToMediaId(shortcode);
+
                     let postTitle = `Instagram Post (${shortcode})`;
                     let postChannel = "@instagram_user";
                     let postThumb = "https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png";
                     let postUrl = `https://www.instagram.com/p/${shortcode}/`;
 
-                    // ===============================================
-                    // 步骤 1: 完美适配 v2 detail 请求 (instagram360 API)
-                    // ===============================================
                     try {
-                        const pRes = await fetch(`https://${rapidHost}/postdetail/?code_or_url=${shortcode}`, {
-                            method: 'GET',
+                        const pRes = await fetch(`https://${rapidHost}/media_info_from_shortcode/v2/?shortcode-v2=${shortcode}`, {
                             headers: { 'x-rapidapi-host': rapidHost, 'x-rapidapi-key': rapidKey }
                         });
-                        
                         if (pRes.ok) {
                             const pData = await pRes.json();
                             const item = pData.items ? pData.items[0] : (pData.data || pData);
                             const node = (item && item.node) ? item.node : item;
-
                             if (node) {
+                                if (node.id || node.pk) {
+                                    mediaId = String(node.pk || node.id).split('_')[0];
+                                }
                                 if (node.caption) {
                                     postTitle = typeof node.caption === 'string' ? node.caption : (node.caption.text || postTitle);
                                 } else if (node.title) {
                                     postTitle = node.title;
                                 }
-
                                 const user = node.user || node.owner || {};
                                 postChannel = '@' + (user.username || 'instagrammer');
                                 
@@ -791,7 +785,7 @@ def generate_index_template():
                             }
                         }
                     } catch(err) {
-                        console.warn("详情接口获取失败，降级使用默认标题:", err);
+                        console.warn("详情接口受阻，直接使用算法计算的 mediaId 抓取评论:", err);
                     }
                     
                     if (typeof postTitle === 'string') {
@@ -803,18 +797,15 @@ def generate_index_template():
 
                     loadingBar.style.width = '55%';
 
-                    // ===============================================
-                    // 步骤 2: 完美适配 v2 comments 请求 (instagram360 API)
-                    // ===============================================
-                    const cRes = await fetch(`https://${rapidHost}/postcomments/?code_or_url=${shortcode}`, {
-                        method: 'GET',
+                    if (!mediaId) {
+                        throw new Error(`未能获取到该贴文的 Media ID，请检查链接是否有效！`);
+                    }
+
+                    const cleanMediaId = String(mediaId).split('_')[0];
+                    const cRes = await fetch(`https://${rapidHost}/media/comments/?media_id=${cleanMediaId}`, {
                         headers: { 'x-rapidapi-host': rapidHost, 'x-rapidapi-key': rapidKey }
                     });
-
-                    if (!cRes.ok) {
-                        throw new Error(`网络或接口拒绝请求 (状态码: ${cRes.status})`);
-                    }
-                    
+                    if (!cRes.ok) throw new Error(`RapidAPI 获取评论失败 (状态码: ${cRes.status})`);
                     const cData = await cRes.json();
                     
                     let rawComments = [];
@@ -830,12 +821,13 @@ def generate_index_template():
                         const cNode = c.node || c;
                         const text = cNode.text || '';
                         
-                        if (text && text.split(' ').length > 2 && !text.includes('http')) {
+                        // ============== 核心修改：利用正则过滤掉纯表情符号/纯符号 ==============
+                        if (text && /[\p{L}\p{N}]/u.test(text) && !text.includes('http')) {
                             const user = cNode.user || cNode.owner || {};
                             const authorName = user.username || "ins_user";
                             const avatar = user.profile_pic_url || (user.hd_profile_pic_url_info && user.hd_profile_pic_url_info.url) || "https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png";
                             const likes = parseInt(cNode.comment_like_count || cNode.like_count || 0);
-                            
+
                             comments.push({
                                 author: authorName,
                                 avatar: avatar,
@@ -847,8 +839,8 @@ def generate_index_template():
 
                     comments.sort((a, b) => b.likes - a.likes);
                     comments = comments.slice(0, 35);
-                    loadingBar.style.width = '75%';
 
+                    loadingBar.style.width = '75%';
                     const postObj = { title: postTitle, channel: postChannel, thumb: postThumb, url: postUrl, id: shortcode };
                     const htmlOutput = generateBaseHTMLString(postObj, comments, AppState.year, AppState.month, AppState.day);
 
@@ -858,7 +850,6 @@ def generate_index_template():
                     const dayStr = AppState.day.toString();
                     const hhmmStr = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
                     const hhmmFile = String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0');
-                    
                     const filename = `${yearStr}_${monthStr}_${dayStr}_${hhmmFile}_ins.html`;
                     const fileRelPath = `${yearStr}/${monthStr}/${filename}`;
 
@@ -873,18 +864,16 @@ def generate_index_template():
                     const idxRes = await fetch(`https://api.github.com/repos/${ghOwner}/${ghRepo}/contents/docs/index.html`, { headers: { 'Authorization': `token ${ghToken}` } });
                     const idxData = await idxRes.json();
                     const idxContent = decodeURIComponent(escape(atob(idxData.content)));
-                    
                     const dataStart = idxContent.indexOf('/*DATA_START*/') + 14;
                     const dataEnd = idxContent.indexOf('/*DATA_END*/');
-                    
                     const archiveObj = JSON.parse(idxContent.substring(dataStart, dataEnd));
+
                     if (!archiveObj[yearStr]) archiveObj[yearStr] = {};
                     if (!archiveObj[yearStr][monthStr]) archiveObj[yearStr][monthStr] = {};
                     if (!archiveObj[yearStr][monthStr][dayStr]) archiveObj[yearStr][monthStr][dayStr] = [];
                     
-                    const newItem = { time: hhmmStr, path: fileRelPath, title: `📸 Instagram 精读: ${postTitle}` };
+                    const newItem = { time: hhmmStr, path: fileRelPath, title: `📸 ${postTitle}` };
                     archiveObj[yearStr][monthStr][dayStr].unshift(newItem);
-                    
                     const newIdxContent = idxContent.substring(0, dataStart) + JSON.stringify(archiveObj) + idxContent.substring(dataEnd);
                     
                     await fetch(`https://api.github.com/repos/${ghOwner}/${ghRepo}/contents/docs/index.html`, {
@@ -897,16 +886,14 @@ def generate_index_template():
                     if (!archiveData[yearStr][monthStr]) archiveData[yearStr][monthStr] = {};
                     if (!archiveData[yearStr][monthStr][dayStr]) archiveData[yearStr][monthStr][dayStr] = [];
                     archiveData[yearStr][monthStr][dayStr].unshift(newItem);
-                    
-                    forceRender();
-                    
+
+                    forceRender(); 
                     loadingBar.style.width = '100%';
                     popToast('🎉 抓取并归档成功！', 1500);
                     this.value = '';
                     setTimeout(() => { loadingBar.style.width = '0%'; }, 1500);
-
                 } catch (err) {
-                    alert('❌ 操作失败: ' + err.message);
+                    alert('❌ 操作失败: ' + err.message); 
                     loadingBar.style.width = '0%';
                 } finally { this.disabled = false; }
             }
@@ -940,7 +927,7 @@ def generate_index_template():
             };
             
             const pageDataStr = JSON.stringify(pageData).replace(/</g, '\\u003c');
-            
+
             function escapeHTML(str) {
                 if (typeof str !== 'string') return '';
                 return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
@@ -1010,6 +997,7 @@ def generate_index_template():
         .anno-box { display: none; margin-top: 8px; width: 100%; box-sizing: border-box; background: #fff; border-left: 3px solid var(--accent); padding: 12px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         .anno-view { font-size: 0.9rem; line-height: 1.5; }
         .anno-edit { width: 100%; min-height: 80px; padding: 10px; font-family: monospace; font-size: 0.9rem; border: 1px dashed #ccc; border-radius: 6px; box-sizing: border-box; display: none; }
+
         .markdown-body h1, .markdown-body h2, .markdown-body h3 { color: var(--accent); font-size: 1.05rem; }
     </style>
 </head>
@@ -1020,7 +1008,6 @@ def generate_index_template():
     </div>
     <div class="container">
         <h2 style="text-align: center; margin-bottom: 20px; color: #333;">📅 ${pageData.year}-${String(pageData.month).padStart(2,'0')}-${String(pageData.day).padStart(2,'0')}</h2>
-        
         <div class="post-card">
             <a href="${escapeHTML(pageData.post.url)}" target="_blank"><img src="${escapeHTML(pageData.post.thumb)}" class="post-thumb" alt="Thumbnail"></a>
             <div class="post-info">
@@ -1032,9 +1019,8 @@ def generate_index_template():
                 </div>
             </div>
         </div>
-
         <div class="chat-container">
-            ${comments_html ? comments_html : '<div class="empty-state">暫無高價值評論。</div>'}
+            ${comments_html ? comments_html : '<div class="empty-state">暫无评论。</div>'}
         </div>
     </div>
     <script id="page-data" type="application/json">${pageDataStr}<` + `/script>
@@ -1045,14 +1031,14 @@ def generate_index_template():
     </script>
 </body>
 </html>"""
-    
+
     html_template = html_template.replace('REPLACEME_JSON_DATA', json_data)
     html_template = html_template.replace('REPLACEME_ENGINE_B64', engine_b64)
-    
+
     os.makedirs(BASE_DIR, exist_ok=True)
     with open(os.path.join(BASE_DIR, "index.html"), "w", encoding="utf-8") as f:
         f.write(html_template)
-    print("✅ `docs/index.html` Instagram 专用版更新完成！已完美适配 v2 详情与 comments 端点。")
+    print("✅ `docs/index.html` Instagram 专用版更新完成！已彻底修复 Header 非法字符崩溃问题并更新短评抓取逻辑。")
 
 if __name__ == "__main__":
     generate_index_template()
