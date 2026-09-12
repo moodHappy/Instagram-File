@@ -104,6 +104,7 @@ async function fetchGLM(text, apiKey, modelName) {
 async function executeAIPipeline(text) {
     const pref = localStorage.getItem('PREFERRED_AI') || 'groq';
     
+    // 强制清理由于复制粘贴导致的不可见字符或中文空格
     const groqKey = (localStorage.getItem('GROQ_API_KEY') || '').replace(/[^\x20-\x7E]/g, '');
     const glmKey = (localStorage.getItem('GLM_API_KEY') || '').replace(/[^\x20-\x7E]/g, '');
     const customKey = (localStorage.getItem('CUSTOM_API_KEY') || '').replace(/[^\x20-\x7E]/g, '');
@@ -694,10 +695,10 @@ def generate_index_template():
             } catch(e) {}
         }
 
+        // ============ 核心重构：最强万能链接解析正则 ============
         function extractInstagramShortcode(url) {
-            // ============== 核心修改：万能链接识别正则，无视参数和特殊格式 ==============
-            const rawUrl = url.split('?')[0]; // 先砍掉 ? 后面的参数
-            const match = rawUrl.match(/(?:p|reel|reels|tv|share\/[a-zA-Z0-9]+|r)\/([A-Za-z0-9_-]+)/i); // 增加了忽略大小写的 /i 和分享标识
+            const rawUrl = url.split('?')[0].replace(/\/$/, ""); 
+            const match = rawUrl.match(/(?:p|reel|reels|tv|share\/r|r)\/([A-Za-z0-9_-]+)/i);
             if (match && match[1]) return match[1];
             if (/^[A-Za-z0-9_-]{8,15}$/.test(url.trim())) return url.trim();
             return null;
@@ -805,37 +806,54 @@ def generate_index_template():
                     if (!cRes.ok) throw new Error(`RapidAPI 获取评论失败 (状态码: ${cRes.status})`);
                     const cData = await cRes.json();
                     
+                    // ============ 核心重构：深度套娃 JSON 解析 ============
                     let rawComments = [];
                     if (Array.isArray(cData)) rawComments = cData;
                     else if (cData.comments && Array.isArray(cData.comments)) rawComments = cData.comments;
                     else if (cData.data && Array.isArray(cData.data)) rawComments = cData.data;
-                    else if (cData.data && cData.data.comments) rawComments = cData.data.comments;
-                    else if (cData.data && cData.data.items) rawComments = cData.data.items;
+                    else if (cData.data && cData.data.comments) {
+                        if (Array.isArray(cData.data.comments)) rawComments = cData.data.comments;
+                        else if (cData.data.comments.items && Array.isArray(cData.data.comments.items)) rawComments = cData.data.comments.items;
+                    }
+                    else if (cData.data && cData.data.items && Array.isArray(cData.data.items)) rawComments = cData.data.items;
                     else if (cData.items && Array.isArray(cData.items)) rawComments = cData.items;
 
                     let comments = [];
+                    let pureEmojiCount = 0; // 记录被拦截的表情符号评论数
+
                     for (let c of rawComments) {
                         const cNode = c.node || c;
                         const text = cNode.text || '';
                         
-                        // ============== 核心过滤机制：移除了只含表情符号的评论 ==============
-                        if (text && /[\p{L}\p{N}]/u.test(text) && !text.includes('http')) {
-                            const user = cNode.user || cNode.owner || {};
-                            const authorName = user.username || "ins_user";
-                            const avatar = user.profile_pic_url || (user.hd_profile_pic_url_info && user.hd_profile_pic_url_info.url) || "https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png";
-                            const likes = parseInt(cNode.comment_like_count || cNode.like_count || 0);
+                        if (text && !text.includes('http')) {
+                            // 正则测试：必须包含字母、数字或汉字才放行，否则算作纯表情符号被过滤
+                            if (/[\p{L}\p{N}]/u.test(text)) {
+                                const user = cNode.user || cNode.owner || {};
+                                const authorName = user.username || "ins_user";
+                                const avatar = user.profile_pic_url || (user.hd_profile_pic_url_info && user.hd_profile_pic_url_info.url) || "https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png";
+                                const likes = parseInt(cNode.comment_like_count || cNode.like_count || 0);
 
-                            comments.push({
-                                author: authorName,
-                                avatar: avatar,
-                                text: text.replace(/\b[A-Z]{2,}\b/g, match => match.toLowerCase()),
-                                likes: likes
-                            });
+                                comments.push({
+                                    author: authorName,
+                                    avatar: avatar,
+                                    text: text.replace(/\b[A-Z]{2,}\b/g, match => match.toLowerCase()),
+                                    likes: likes
+                                });
+                            } else {
+                                pureEmojiCount++;
+                            }
                         }
                     }
 
                     comments.sort((a, b) => b.likes - a.likes);
                     comments = comments.slice(0, 35);
+                    
+                    // ============ 核心提醒：如果过滤完没剩下评论 ============
+                    if (rawComments.length > 0 && comments.length === 0) {
+                        alert(`⚠️ 诊断提醒：\n抓取到了 ${rawComments.length} 条评论，但因为你开启了【过滤纯表情符号】功能，这 ${pureEmojiCount} 条纯表情评论被自动删除了。\n最终剩下的有效文本评论数量为 0。`);
+                    } else if (rawComments.length === 0) {
+                        alert(`⚠️ 诊断提醒：\n该帖子/Reels 目前在接口中查询不到任何评论（可能评论已关闭或数据异常）。`);
+                    }
 
                     loadingBar.style.width = '75%';
                     const postObj = { title: postTitle, channel: postChannel, thumb: postThumb, url: postUrl, id: shortcode };
