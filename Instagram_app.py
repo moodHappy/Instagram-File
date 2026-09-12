@@ -297,7 +297,7 @@ function reconstructSelfHTML() {
             </div>
         </div>
         <div class="chat-container">
-            ${comments_html ? comments_html : '<div class="empty-state">暫無高價值評論。</div>'}
+            ${comments_html ? comments_html : '<div class="empty-state">暫無有效評論。</div>'}
         </div>
     </div>
     <script id="page-data" type="application/json">${newJsonStr}<\/script>
@@ -362,7 +362,7 @@ def generate_index_template():
                             f_year, f_month, f_day = str(int(parts[0])), str(int(parts[1])), str(int(parts[2]))
                             time_str = f"{parts[3][:2]}:{parts[3][2:4]}"
                             file_path = f"{year}/{month}/{file}"
-                            title = "📸 Instagram 贴文精读"
+                            title = "📸 Ins 单集精读"
 
                             if f_year not in archive_data: archive_data[f_year] = {}
                             if f_month not in archive_data[f_year]: archive_data[f_year][f_month] = {}
@@ -428,9 +428,9 @@ def generate_index_template():
         
         .news-section { padding: 0 15px; }
         .news-item-wrapper { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-        .news-item { flex: 1; background: var(--card); border-radius: 14px; padding: 18px 16px; display: flex; align-items: center; text-decoration: none; color: var(--text); box-shadow: 0 2px 8px rgba(0,0,0,0.03); border-left: 4px solid var(--primary); }
-        .news-title { font-size: 15px; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: bold; flex: 1; }
-        .delete-btn { background: #ff3b30; color: white; border: none; border-radius: 10px; padding: 0 15px; height: 54px; font-size: 16px; cursor: pointer; display: none; }
+        .news-item { flex: 1; min-width: 0; background: var(--card); border-radius: 14px; padding: 16px 14px; display: flex; align-items: center; text-decoration: none; color: var(--text); box-shadow: 0 2px 8px rgba(0,0,0,0.03); border-left: 4px solid var(--primary); }
+        .news-title { font-size: 14px; color: var(--primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: bold; flex: 1; }
+        .delete-btn { background: #ff3b30; color: white; border: none; border-radius: 10px; padding: 0 15px; height: 50px; font-size: 16px; cursor: pointer; display: none; }
         
         .empty-state { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px; background: var(--card); border-radius: 14px; }
         #loadingBar { height: 3px; background: var(--ins-gradient); width: 0%; transition: width 0.3s; position: absolute; top: 0; left: 0; z-index: 30; }
@@ -620,7 +620,10 @@ def generate_index_template():
                 dayData.forEach((news, index) => {
                     const wrapper = document.createElement('div'); wrapper.className = 'news-item-wrapper';
                     const a = document.createElement('a'); a.href = news.path; a.className = 'news-item';
-                    a.innerHTML = `<span class="news-title" style="color: var(--primary);">${news.title} (${news.time})</span>`;
+                    
+                    // 简短化标题展示，带省略号防溢出
+                    const displayTitle = news.title.replace(/^📸\s*(Instagram|Ins)\s*(贴文|单集)?精读:\s*/, '');
+                    a.innerHTML = `<span class="news-title">📸 Ins 精读: ${escapeHTML(displayTitle)} (${news.time})</span>`;
                     wrapper.appendChild(a);
 
                     const delBtn = document.createElement('button'); delBtn.className = 'delete-btn'; delBtn.innerHTML = '🗑️';
@@ -692,7 +695,6 @@ def generate_index_template():
             } catch(e) {}
         }
 
-        // ================= Instagram 核心算法：Shortcode 与 Media ID 互转 =================
         function extractInstagramShortcode(url) {
             const match = url.match(/(?:p|reel|reels|share\/reel|share\/p)\/([A-Za-z0-9_-]+)/);
             if (match && match[1]) return match[1];
@@ -700,7 +702,7 @@ def generate_index_template():
             return null;
         }
 
-        // 官方原生算法：无需网络请求，毫秒级将 shortcode 还原为纯数字 media_id
+        // 官方原生 Base64 还原 Media ID 算法
         function shortcodeToMediaId(shortcode) {
             try {
                 const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
@@ -745,15 +747,13 @@ def generate_index_template():
                 this.disabled = true;
 
                 try {
-                    // 1. 优先通过算法计算出 media_id (零误差保底)
                     let mediaId = shortcodeToMediaId(shortcode);
-
-                    let postTitle = `Instagram Post (${shortcode})`;
+                    let postTitle = `Post ${shortcode}`;
                     let postChannel = "@instagram_user";
                     let postThumb = "https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png";
                     let postUrl = `https://www.instagram.com/p/${shortcode}/`;
 
-                    // 2. 调用精确的【media_info_from_shortcode/v2】端点获取封面、标题和官方 pk
+                    // 1. 请求详情端点
                     try {
                         const pRes = await fetch(`https://${rapidHost}/media_info_from_shortcode/v2/?shortcode-v2=${shortcode}`, {
                             headers: { 'x-rapidapi-host': rapidHost, 'x-rapidapi-key': rapidKey }
@@ -782,16 +782,16 @@ def generate_index_template():
                             }
                         }
                     } catch(err) {
-                        console.warn("详情接口受阻，直接使用算法计算的 mediaId 抓取评论:", err);
+                        console.warn("详情接口受阻，继续使用算法 mediaId 抓取评论:", err);
                     }
 
                     loadingBar.style.width = '55%';
 
                     if (!mediaId) {
-                        throw new Error(`未能获取到该贴文的 Media ID，请检查链接是否有效！`);
+                        throw new Error(`未能获取到该贴文的 Media ID，请检查链接！`);
                     }
 
-                    // 3. 调用精确的【/media/comments/】端点
+                    // 2. 请求评论端点
                     const cleanMediaId = String(mediaId).split('_')[0];
                     const cRes = await fetch(`https://${rapidHost}/media/comments/?media_id=${cleanMediaId}`, {
                         headers: { 'x-rapidapi-host': rapidHost, 'x-rapidapi-key': rapidKey }
@@ -799,35 +799,44 @@ def generate_index_template():
                     if (!cRes.ok) throw new Error(`RapidAPI 获取评论失败 (状态码: ${cRes.status})`);
                     const cData = await cRes.json();
                     
+                    // 兼容各类返回的评论数组包装
                     let rawComments = [];
                     if (Array.isArray(cData)) rawComments = cData;
                     else if (cData.comments && Array.isArray(cData.comments)) rawComments = cData.comments;
                     else if (cData.data && Array.isArray(cData.data)) rawComments = cData.data;
-                    else if (cData.data && cData.data.comments) rawComments = cData.data.comments;
-                    else if (cData.data && cData.data.items) rawComments = cData.data.items;
+                    else if (cData.data && cData.data.comments && Array.isArray(cData.data.comments)) rawComments = cData.data.comments;
+                    else if (cData.data && cData.data.items && Array.isArray(cData.data.items)) rawComments = cData.data.items;
                     else if (cData.items && Array.isArray(cData.items)) rawComments = cData.items;
 
                     let comments = [];
                     for (let c of rawComments) {
                         const cNode = c.node || c;
-                        const text = cNode.text || '';
-                        if (text && text.split(' ').length > 2 && !text.includes('http')) {
-                            const user = cNode.user || cNode.owner || {};
-                            const authorName = user.username || "ins_user";
-                            const avatar = user.profile_pic_url || (user.hd_profile_pic_url_info && user.hd_profile_pic_url_info.url) || "https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png";
-                            const likes = parseInt(cNode.comment_like_count || cNode.like_count || 0);
+                        const text = (cNode.text || cNode.content || '').trim();
+                        
+                        // 【新规则】：
+                        // 1. 排除空评论及链接广告
+                        if (!text || text.includes('http')) continue;
 
-                            comments.push({
-                                author: authorName,
-                                avatar: avatar,
-                                text: text.replace(/\b[A-Z]{2,}\b/g, match => match.toLowerCase()),
-                                likes: likes
-                            });
-                        }
+                        // 2. 彻底剔除纯表情包符号（如 🌸🌷🌺🌹、😂😂）
+                        // 必须至少包含一个实体字符（英文、数字或中文字符）
+                        const hasSubstantiveText = /[a-zA-Z0-9\u4e00-\u9fa5]/.test(text);
+                        if (!hasSubstantiveText) continue;
+
+                        const user = cNode.user || cNode.owner || {};
+                        const authorName = user.username || "ins_user";
+                        const avatar = user.profile_pic_url || (user.hd_profile_pic_url_info && user.hd_profile_pic_url_info.url) || "https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png";
+                        const likes = parseInt(cNode.comment_like_count || cNode.like_count || cNode.likes || 0);
+
+                        comments.push({
+                            author: authorName,
+                            avatar: avatar,
+                            text: text.replace(/\b[A-Z]{2,}\b/g, match => match.toLowerCase()),
+                            likes: likes
+                        });
                     }
 
                     comments.sort((a, b) => b.likes - a.likes);
-                    comments = comments.slice(0, 35);
+                    comments = comments.slice(0, 40); // 保留前 40 条
 
                     loadingBar.style.width = '75%';
                     const postObj = { title: postTitle, channel: postChannel, thumb: postThumb, url: postUrl, id: shortcode };
@@ -846,7 +855,7 @@ def generate_index_template():
                     await fetch(`https://api.github.com/repos/${ghOwner}/${ghRepo}/contents/docs/${fileRelPath}`, {
                         method: 'PUT',
                         headers: { 'Authorization': `token ${ghToken}`, 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ message: `Add ins post: ${postTitle.substring(0, 30)}`, content: btoa(unescape(encodeURIComponent(htmlOutput))) })
+                        body: JSON.stringify({ message: `Add ins post: ${shortcode}`, content: btoa(unescape(encodeURIComponent(htmlOutput))) })
                     });
 
                     loadingBar.style.width = '95%';
@@ -861,14 +870,15 @@ def generate_index_template():
                     if (!archiveObj[yearStr][monthStr]) archiveObj[yearStr][monthStr] = {};
                     if (!archiveObj[yearStr][monthStr][dayStr]) archiveObj[yearStr][monthStr][dayStr] = [];
                     
-                    const newItem = { time: hhmmStr, path: fileRelPath, title: `📸 Instagram 精读: ${postTitle}` };
+                    // 【短标题设计】：直接采用 shortcode，彻底解决撑破屏幕问题
+                    const newItem = { time: hhmmStr, path: fileRelPath, title: shortcode };
                     archiveObj[yearStr][monthStr][dayStr].unshift(newItem);
                     const newIdxContent = idxContent.substring(0, dataStart) + JSON.stringify(archiveObj) + idxContent.substring(dataEnd);
                     
                     await fetch(`https://api.github.com/repos/${ghOwner}/${ghRepo}/contents/docs/index.html`, {
                         method: 'PUT',
                         headers: { 'Authorization': `token ${ghToken}`, 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ message: `Update calendar index`, content: btoa(unescape(encodeURIComponent(newIdxContent))), sha: idxData.sha })
+                        body: JSON.stringify({ message: `Update calendar index: ${shortcode}`, content: btoa(unescape(encodeURIComponent(newIdxContent))), sha: idxData.sha })
                     });
 
                     if (!archiveData[yearStr]) archiveData[yearStr] = {};
@@ -1009,7 +1019,7 @@ def generate_index_template():
             </div>
         </div>
         <div class="chat-container">
-            ${comments_html ? comments_html : '<div class="empty-state">暫無高價值評論。</div>'}
+            ${comments_html ? comments_html : '<div class="empty-state">暫無有效評論。</div>'}
         </div>
     </div>
     <script id="page-data" type="application/json">${pageDataStr}<` + `/script>
@@ -1027,7 +1037,7 @@ def generate_index_template():
     os.makedirs(BASE_DIR, exist_ok=True)
     with open(os.path.join(BASE_DIR, "index.html"), "w", encoding="utf-8") as f:
         f.write(html_template)
-    print("✅ `docs/index.html` Instagram 专用版更新完成！已完美适配 v2 详情与 comments 端点。")
+    print("✅ `docs/index.html` 更新完成！已剔除纯表情评论并精简日历标题。")
 
 if __name__ == "__main__":
     generate_index_template()
