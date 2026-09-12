@@ -297,7 +297,7 @@ function reconstructSelfHTML() {
             </div>
         </div>
         <div class="chat-container">
-            ${comments_html ? comments_html : '<div class="empty-state">暫無高價值評論。</div>'}
+            ${comments_html ? comments_html : '<div class="empty-state">暫無評論。</div>'}
         </div>
     </div>
     <script id="page-data" type="application/json">${newJsonStr}<\/script>
@@ -700,7 +700,6 @@ def generate_index_template():
             return null;
         }
 
-        // 官方原生算法：无需网络请求，毫秒级将 shortcode 还原为纯数字 media_id
         function shortcodeToMediaId(shortcode) {
             try {
                 const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
@@ -745,7 +744,6 @@ def generate_index_template():
                 this.disabled = true;
 
                 try {
-                    // 1. 优先通过算法计算出 media_id (零误差保底)
                     let mediaId = shortcodeToMediaId(shortcode);
 
                     let postTitle = `Instagram Post (${shortcode})`;
@@ -753,7 +751,6 @@ def generate_index_template():
                     let postThumb = "https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png";
                     let postUrl = `https://www.instagram.com/p/${shortcode}/`;
 
-                    // 2. 调用精确的【media_info_from_shortcode/v2】端点获取封面、标题和官方 pk
                     try {
                         const pRes = await fetch(`https://${rapidHost}/media_info_from_shortcode/v2/?shortcode-v2=${shortcode}`, {
                             headers: { 'x-rapidapi-host': rapidHost, 'x-rapidapi-key': rapidKey }
@@ -784,6 +781,14 @@ def generate_index_template():
                     } catch(err) {
                         console.warn("详情接口受阻，直接使用算法计算的 mediaId 抓取评论:", err);
                     }
+                    
+                    // ================= 新增：处理/截断标题防止溢出 =================
+                    if (typeof postTitle === 'string') {
+                        postTitle = postTitle.replace(/[\r\n]+/g, ' ').trim(); // 移除多余换行符
+                        if (postTitle.length > 40) {
+                            postTitle = postTitle.substring(0, 40) + '...'; // 超出 40 个字符后进行截断
+                        }
+                    }
 
                     loadingBar.style.width = '55%';
 
@@ -791,7 +796,6 @@ def generate_index_template():
                         throw new Error(`未能获取到该贴文的 Media ID，请检查链接是否有效！`);
                     }
 
-                    // 3. 调用精确的【/media/comments/】端点
                     const cleanMediaId = String(mediaId).split('_')[0];
                     const cRes = await fetch(`https://${rapidHost}/media/comments/?media_id=${cleanMediaId}`, {
                         headers: { 'x-rapidapi-host': rapidHost, 'x-rapidapi-key': rapidKey }
@@ -811,7 +815,10 @@ def generate_index_template():
                     for (let c of rawComments) {
                         const cNode = c.node || c;
                         const text = cNode.text || '';
-                        if (text && text.split(' ').length > 2 && !text.includes('http')) {
+                        
+                        // ================= 核心修改：利用正则过滤掉纯表情符号/纯符号 =================
+                        // \p{L}|\p{N} 支持识别全部语言的字母/汉字/日假名和数字。如果只包含表情，就会过滤掉。
+                        if (text && /[\p{L}\p{N}]/u.test(text) && !text.includes('http')) {
                             const user = cNode.user || cNode.owner || {};
                             const authorName = user.username || "ins_user";
                             const avatar = user.profile_pic_url || (user.hd_profile_pic_url_info && user.hd_profile_pic_url_info.url) || "https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png";
@@ -1009,7 +1016,7 @@ def generate_index_template():
             </div>
         </div>
         <div class="chat-container">
-            ${comments_html ? comments_html : '<div class="empty-state">暫無高價值評論。</div>'}
+            ${comments_html ? comments_html : '<div class="empty-state">暫無評論。</div>'}
         </div>
     </div>
     <script id="page-data" type="application/json">${pageDataStr}<` + `/script>
