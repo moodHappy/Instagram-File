@@ -103,13 +103,16 @@ async function fetchGLM(text, apiKey, modelName) {
 
 async function executeAIPipeline(text) {
     const pref = localStorage.getItem('PREFERRED_AI') || 'groq';
-    const groqKey = localStorage.getItem('GROQ_API_KEY') || '';
-    const glmKey = localStorage.getItem('GLM_API_KEY') || '';
-    const groqModel = localStorage.getItem('GROQ_MODEL') || 'llama-3.3-70b-versatile';
-    const glmModel = localStorage.getItem('GLM_MODEL') || 'GLM-4.5-Flash';
-    const customUrl = localStorage.getItem('CUSTOM_API_URL') || '';
-    const customKey = localStorage.getItem('CUSTOM_API_KEY') || '';
-    const customModel = localStorage.getItem('CUSTOM_MODEL') || '';
+    
+    // 强制清理由于复制粘贴导致的不可见字符或中文空格
+    const groqKey = (localStorage.getItem('GROQ_API_KEY') || '').replace(/[^\x20-\x7E]/g, '');
+    const glmKey = (localStorage.getItem('GLM_API_KEY') || '').replace(/[^\x20-\x7E]/g, '');
+    const customKey = (localStorage.getItem('CUSTOM_API_KEY') || '').replace(/[^\x20-\x7E]/g, '');
+    
+    const groqModel = (localStorage.getItem('GROQ_MODEL') || 'llama-3.3-70b-versatile').trim();
+    const glmModel = (localStorage.getItem('GLM_MODEL') || 'GLM-4.5-Flash').trim();
+    const customUrl = (localStorage.getItem('CUSTOM_API_URL') || '').trim();
+    const customModel = (localStorage.getItem('CUSTOM_MODEL') || '').trim();
 
     if ((!groqKey && !glmKey && !customKey) || (!groqModel && !glmModel && !customModel)) throw new Error('MISSING_KEYS_OR_MODELS');
 
@@ -157,9 +160,9 @@ function initAnnotations() {
                     if (!confirmOverwrite) return;
                 }
 
-                const groqKey = localStorage.getItem('GROQ_API_KEY') || '';
-                const glmKey = localStorage.getItem('GLM_API_KEY') || '';
-                const customKey = localStorage.getItem('CUSTOM_API_KEY') || '';
+                const groqKey = (localStorage.getItem('GROQ_API_KEY') || '').trim();
+                const glmKey = (localStorage.getItem('GLM_API_KEY') || '').trim();
+                const customKey = (localStorage.getItem('CUSTOM_API_KEY') || '').trim();
                 if (!groqKey && !glmKey && !customKey) { alert('⚠️ 请先返回日历配置中心设置 AI API Key！'); return; }
 
                 const pClone = wrap.querySelector('.card-text').cloneNode(true);
@@ -297,7 +300,7 @@ function reconstructSelfHTML() {
             </div>
         </div>
         <div class="chat-container">
-            ${comments_html ? comments_html : '<div class="empty-state">暫無評論。</div>'}
+            ${comments_html ? comments_html : '<div class="empty-state">暫无评论。</div>'}
         </div>
     </div>
     <script id="page-data" type="application/json">${newJsonStr}<\/script>
@@ -307,8 +310,9 @@ function reconstructSelfHTML() {
 }
 
 async function syncToGitHub() {
-    const token = localStorage.getItem('GH_TOKEN');
-    const owner = localStorage.getItem('GH_OWNER');
+    // 强制净化 Token，防止包含非法字符导致 Fetch Header 报错
+    const token = (localStorage.getItem('GH_TOKEN') || '').replace(/[^\x20-\x7E]/g, '');
+    const owner = (localStorage.getItem('GH_OWNER') || '').replace(/[^\x20-\x7E]/g, '');
     const repo = 'Instagram-File';
     
     if(!token || !owner) { alert('缺少 GitHub Token，无法同步！'); return; }
@@ -557,18 +561,19 @@ def generate_index_template():
 
         function saveConfigAndNotify(e) {
             if (e) { e.preventDefault(); e.stopPropagation(); }
-            localStorage.setItem('INS_RAPIDAPI_KEY', (document.getElementById('cfgRapidKey').value || '').trim());
-            localStorage.setItem('INS_RAPIDAPI_HOST', (document.getElementById('cfgRapidHost').value || '').trim() || 'instagram-scraper-ai1.p.rapidapi.com');
-            localStorage.setItem('GH_TOKEN', (document.getElementById('cfgGhToken').value || '').trim());
-            localStorage.setItem('GH_OWNER', (document.getElementById('cfgGhOwner').value || '').trim());
+            // 写入本地存储前也做一次清理，防手滑
+            localStorage.setItem('INS_RAPIDAPI_KEY', (document.getElementById('cfgRapidKey').value || '').trim().replace(/[^\x20-\x7E]/g, ''));
+            localStorage.setItem('INS_RAPIDAPI_HOST', (document.getElementById('cfgRapidHost').value || '').trim().replace(/[^\x20-\x7E]/g, '') || 'instagram-scraper-ai1.p.rapidapi.com');
+            localStorage.setItem('GH_TOKEN', (document.getElementById('cfgGhToken').value || '').trim().replace(/[^\x20-\x7E]/g, ''));
+            localStorage.setItem('GH_OWNER', (document.getElementById('cfgGhOwner').value || '').trim().replace(/[^\x20-\x7E]/g, ''));
             
             localStorage.setItem('PREFERRED_AI', document.getElementById('cfgPrefAI').value || 'groq');
             localStorage.setItem('CUSTOM_API_URL', (document.getElementById('cfgCustomURL').value || '').trim());
-            localStorage.setItem('CUSTOM_API_KEY', (document.getElementById('cfgCustomKey').value || '').trim());
+            localStorage.setItem('CUSTOM_API_KEY', (document.getElementById('cfgCustomKey').value || '').trim().replace(/[^\x20-\x7E]/g, ''));
             localStorage.setItem('CUSTOM_MODEL', (document.getElementById('cfgCustomModel').value || '').trim());
-            localStorage.setItem('GROQ_API_KEY', (document.getElementById('cfgGroq').value || '').trim());
+            localStorage.setItem('GROQ_API_KEY', (document.getElementById('cfgGroq').value || '').trim().replace(/[^\x20-\x7E]/g, ''));
             localStorage.setItem('GROQ_MODEL', (document.getElementById('cfgGroqModel').value || '').trim());
-            localStorage.setItem('GLM_API_KEY', (document.getElementById('cfgGLM').value || '').trim());
+            localStorage.setItem('GLM_API_KEY', (document.getElementById('cfgGLM').value || '').trim().replace(/[^\x20-\x7E]/g, ''));
             localStorage.setItem('GLM_MODEL', (document.getElementById('cfgGLMModel').value || '').trim());
             closeConfigModal();
             popToast('配置已本地保存！', 1200);
@@ -662,8 +667,9 @@ def generate_index_template():
         initSelects(); forceRender();
 
         async function syncDeleteToGithub(fileRelPath) {
-            const ghToken = localStorage.getItem('GH_TOKEN');
-            const ghOwner = localStorage.getItem('GH_OWNER');
+            // 强制清理非法字符
+            const ghToken = (localStorage.getItem('GH_TOKEN') || '').replace(/[^\x20-\x7E]/g, '');
+            const ghOwner = (localStorage.getItem('GH_OWNER') || '').replace(/[^\x20-\x7E]/g, '');
             const ghRepo = 'Instagram-File';
             if (!ghToken || !ghOwner) return;
             try {
@@ -692,7 +698,6 @@ def generate_index_template():
             } catch(e) {}
         }
 
-        // ================= Instagram 核心算法：Shortcode 与 Media ID 互转 =================
         function extractInstagramShortcode(url) {
             const match = url.match(/(?:p|reel|reels|share\/reel|share\/p)\/([A-Za-z0-9_-]+)/);
             if (match && match[1]) return match[1];
@@ -721,10 +726,11 @@ def generate_index_template():
                 const rawUrl = this.value.trim();
                 if (!rawUrl) return;
 
-                const rapidKey = localStorage.getItem('INS_RAPIDAPI_KEY');
-                const rapidHost = localStorage.getItem('INS_RAPIDAPI_HOST') || 'instagram-scraper-ai1.p.rapidapi.com';
-                const ghToken = localStorage.getItem('GH_TOKEN');
-                const ghOwner = localStorage.getItem('GH_OWNER');
+                // ============== 关键修复：强制移除所有非法 ISO-8859-1 字符 ==============
+                const rapidKey = (localStorage.getItem('INS_RAPIDAPI_KEY') || '').replace(/[^\x20-\x7E]/g, '');
+                const rapidHost = (localStorage.getItem('INS_RAPIDAPI_HOST') || 'instagram-scraper-ai1.p.rapidapi.com').replace(/[^\x20-\x7E]/g, '');
+                const ghToken = (localStorage.getItem('GH_TOKEN') || '').replace(/[^\x20-\x7E]/g, '');
+                const ghOwner = (localStorage.getItem('GH_OWNER') || '').replace(/[^\x20-\x7E]/g, '');
                 const ghRepo = 'Instagram-File';
                 
                 if (!rapidKey || !ghToken || !ghOwner) {
@@ -1031,7 +1037,7 @@ def generate_index_template():
     os.makedirs(BASE_DIR, exist_ok=True)
     with open(os.path.join(BASE_DIR, "index.html"), "w", encoding="utf-8") as f:
         f.write(html_template)
-    print("✅ `docs/index.html` Instagram 专用版更新完成！已完美适配 v2 详情与 comments 端点。")
+    print("✅ `docs/index.html` Instagram 专用版更新完成！已彻底修复 Header 非法字符崩溃问题。")
 
 if __name__ == "__main__":
     generate_index_template()
