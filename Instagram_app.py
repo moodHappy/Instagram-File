@@ -104,6 +104,7 @@ async function fetchGLM(text, apiKey, modelName) {
 async function executeAIPipeline(text) {
     const pref = localStorage.getItem('PREFERRED_AI') || 'groq';
     
+    // 强制清理由于复制粘贴导致的不可见字符或中文空格
     const groqKey = (localStorage.getItem('GROQ_API_KEY') || '').replace(/[^\x20-\x7E]/g, '');
     const glmKey = (localStorage.getItem('GLM_API_KEY') || '').replace(/[^\x20-\x7E]/g, '');
     const customKey = (localStorage.getItem('CUSTOM_API_KEY') || '').replace(/[^\x20-\x7E]/g, '');
@@ -299,7 +300,7 @@ function reconstructSelfHTML() {
             </div>
         </div>
         <div class="chat-container">
-            ${comments_html ? comments_html : '<div class="empty-state">暂无评论 👀<br><span style="font-size:12px;color:#bbb;">(已开启深度扫描，当前帖子/Reels接口真没返回有效评论数据)</span></div>'}
+            ${comments_html ? comments_html : '<div class="empty-state">暫无评论。</div>'}
         </div>
     </div>
     <script id="page-data" type="application/json">${newJsonStr}<\/script>
@@ -309,6 +310,7 @@ function reconstructSelfHTML() {
 }
 
 async function syncToGitHub() {
+    // 强制净化 Token，防止包含非法字符导致 Fetch Header 报错
     const token = (localStorage.getItem('GH_TOKEN') || '').replace(/[^\x20-\x7E]/g, '');
     const owner = (localStorage.getItem('GH_OWNER') || '').replace(/[^\x20-\x7E]/g, '');
     const repo = 'Instagram-File';
@@ -394,7 +396,7 @@ def generate_index_template():
             --border: #dbdbdb; --card: #fff; 
         }
         body, html { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; background: var(--bg); margin: 0; padding: 0; color: var(--text); }
-        .container { max-width: 600px; margin: 0 auto; padding: 0 0 50px 0; }
+        .container { max-width: 600px; margin: 0 auto; padding-bottom: 20px; }
         
         .manual-fetch-bar { background: var(--card); padding: 12px 15px; display: flex; gap: 10px; align-items: center; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 20; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
         .fetch-input { flex: 1; padding: 10px 15px; border: 1px solid #ccc; border-radius: 20px; font-size: 14px; outline: none; background: #fafafa; transition: border 0.2s; }
@@ -559,6 +561,7 @@ def generate_index_template():
 
         function saveConfigAndNotify(e) {
             if (e) { e.preventDefault(); e.stopPropagation(); }
+            // 写入本地存储前也做一次清理，防手滑
             localStorage.setItem('INS_RAPIDAPI_KEY', (document.getElementById('cfgRapidKey').value || '').trim().replace(/[^\x20-\x7E]/g, ''));
             localStorage.setItem('INS_RAPIDAPI_HOST', (document.getElementById('cfgRapidHost').value || '').trim().replace(/[^\x20-\x7E]/g, '') || 'instagram-scraper-ai1.p.rapidapi.com');
             localStorage.setItem('GH_TOKEN', (document.getElementById('cfgGhToken').value || '').trim().replace(/[^\x20-\x7E]/g, ''));
@@ -664,6 +667,7 @@ def generate_index_template():
         initSelects(); forceRender();
 
         async function syncDeleteToGithub(fileRelPath) {
+            // 强制清理非法字符
             const ghToken = (localStorage.getItem('GH_TOKEN') || '').replace(/[^\x20-\x7E]/g, '');
             const ghOwner = (localStorage.getItem('GH_OWNER') || '').replace(/[^\x20-\x7E]/g, '');
             const ghRepo = 'Instagram-File';
@@ -695,8 +699,7 @@ def generate_index_template():
         }
 
         function extractInstagramShortcode(url) {
-            const rawUrl = url.split('?')[0].replace(/\/$/, ""); 
-            const match = rawUrl.match(/(?:p|reel|reels|tv|share\/[a-zA-Z0-9_-]+|r)\/([A-Za-z0-9_-]+)/i);
+            const match = url.match(/(?:p|reel|reels|share\/reel|share\/p)\/([A-Za-z0-9_-]+)/);
             if (match && match[1]) return match[1];
             if (/^[A-Za-z0-9_-]{8,15}$/.test(url.trim())) return url.trim();
             return null;
@@ -723,6 +726,7 @@ def generate_index_template():
                 const rawUrl = this.value.trim();
                 if (!rawUrl) return;
 
+                // ============== 关键修复：强制移除所有非法 ISO-8859-1 字符 ==============
                 const rapidKey = (localStorage.getItem('INS_RAPIDAPI_KEY') || '').replace(/[^\x20-\x7E]/g, '');
                 const rapidHost = (localStorage.getItem('INS_RAPIDAPI_HOST') || 'instagram-scraper-ai1.p.rapidapi.com').replace(/[^\x20-\x7E]/g, '');
                 const ghToken = (localStorage.getItem('GH_TOKEN') || '').replace(/[^\x20-\x7E]/g, '');
@@ -737,7 +741,7 @@ def generate_index_template():
 
                 const shortcode = extractInstagramShortcode(rawUrl);
                 if (!shortcode) {
-                    alert('⚠️ 未能识别此链接的 Shortcode，请确认是有效的 Instagram 链接！');
+                    alert('⚠️ 未能识别此链接的 Shortcode，请确认是 Instagram Post 或 Reel 链接！');
                     return;
                 }
 
@@ -753,35 +757,35 @@ def generate_index_template():
                     let postThumb = "https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png";
                     let postUrl = `https://www.instagram.com/p/${shortcode}/`;
 
-                    let pData = null;
                     try {
                         const pRes = await fetch(`https://${rapidHost}/media_info_from_shortcode/v2/?shortcode-v2=${shortcode}`, {
                             headers: { 'x-rapidapi-host': rapidHost, 'x-rapidapi-key': rapidKey }
                         });
                         if (pRes.ok) {
-                            pData = await pRes.json();
+                            const pData = await pRes.json();
                             const item = pData.items ? pData.items[0] : (pData.data || pData);
                             const node = (item && item.node) ? item.node : item;
                             if (node) {
-                                if (node.pk) mediaId = String(node.pk).split('_')[0];
-                                else if (node.id) mediaId = String(node.id).split('_')[0];
+                                if (node.id || node.pk) {
+                                    mediaId = String(node.pk || node.id).split('_')[0];
+                                }
+                                if (node.caption) {
+                                    postTitle = typeof node.caption === 'string' ? node.caption : (node.caption.text || postTitle);
+                                } else if (node.title) {
+                                    postTitle = node.title;
+                                }
+                                const user = node.user || node.owner || {};
+                                postChannel = '@' + (user.username || 'instagrammer');
                                 
-                                if (node.caption && node.caption.text) postTitle = node.caption.text;
-                                else if (typeof node.caption === 'string') postTitle = node.caption;
-                                else if (node.title) postTitle = node.title;
-                                
-                                let u = node.user || node.owner || {};
-                                if (u.username) postChannel = '@' + u.username;
-                                
-                                if (node.image_versions2 && node.image_versions2.candidates && node.image_versions2.candidates[0]) {
+                                if (node.image_versions2 && node.image_versions2.candidates && node.image_versions2.candidates.length > 0) {
                                     postThumb = node.image_versions2.candidates[0].url;
-                                } else if (node.display_uri || node.display_url || node.thumbnail_src) {
-                                    postThumb = node.display_uri || node.display_url || node.thumbnail_src;
+                                } else if (node.display_uri || node.display_url) {
+                                    postThumb = node.display_uri || node.display_url;
                                 }
                             }
                         }
                     } catch(err) {
-                        console.warn("详情接口提取受阻，尝试备用提取方案:", err);
+                        console.warn("详情接口受阻，直接使用算法计算的 mediaId 抓取评论:", err);
                     }
                     
                     if (typeof postTitle === 'string') {
@@ -797,111 +801,44 @@ def generate_index_template():
                         throw new Error(`未能获取到该贴文的 Media ID，请检查链接是否有效！`);
                     }
 
-                    // ============ 获取评论及捕获真实错误 ============
-                    let cData = null;
-                    let cErrorStr = "";
-                    try {
-                        const cleanMediaId = String(mediaId).split('_')[0];
-                        const cRes = await fetch(`https://${rapidHost}/media/comments/?media_id=${cleanMediaId}`, {
-                            headers: { 'x-rapidapi-host': rapidHost, 'x-rapidapi-key': rapidKey }
-                        });
-                        if (cRes.ok) {
-                            cData = await cRes.json();
-                        } else {
-                            cErrorStr = `HTTP ${cRes.status}: ${await cRes.text()}`;
-                        }
-                    } catch(err) {
-                        console.warn("单独获取评论接口失败:", err);
-                        cErrorStr = err.message;
-                    }
+                    const cleanMediaId = String(mediaId).split('_')[0];
+                    const cRes = await fetch(`https://${rapidHost}/media/comments/?media_id=${cleanMediaId}`, {
+                        headers: { 'x-rapidapi-host': rapidHost, 'x-rapidapi-key': rapidKey }
+                    });
+                    if (!cRes.ok) throw new Error(`RapidAPI 获取评论失败 (状态码: ${cRes.status})`);
+                    const cData = await cRes.json();
+                    
+                    let rawComments = [];
+                    if (Array.isArray(cData)) rawComments = cData;
+                    else if (cData.comments && Array.isArray(cData.comments)) rawComments = cData.comments;
+                    else if (cData.data && Array.isArray(cData.data)) rawComments = cData.data;
+                    else if (cData.data && cData.data.comments) rawComments = cData.data.comments;
+                    else if (cData.data && cData.data.items) rawComments = cData.data.items;
+                    else if (cData.items && Array.isArray(cData.items)) rawComments = cData.items;
 
-                    // ============ 核心重构：最强 X 射线 JSON 深度掘地三尺扫描器 ============
-                    let seenComments = new Set();
                     let comments = [];
-                    let pureEmojiCount = 0;
-                    
-                    function deepSearchComments(obj) {
-                        if (!obj || typeof obj !== 'object') return;
+                    for (let c of rawComments) {
+                        const cNode = c.node || c;
+                        const text = cNode.text || '';
                         
-                        // 多维度匹配可能代表“评论正文”和“用户名”的字段
-                        let txt = obj.text || obj.content || obj.comment_text || obj.comment;
-                        let uname = null;
-                        let avatar = "https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png";
-                        
-                        if (obj.user && typeof obj.user === 'object') { uname = obj.user.username; avatar = obj.user.profile_pic_url || avatar; }
-                        else if (obj.owner && typeof obj.owner === 'object') { uname = obj.owner.username; avatar = obj.owner.profile_pic_url || avatar; }
-                        else if (obj.username) { uname = obj.username; avatar = obj.profile_pic_url || avatar; }
-                        
-                        if (!txt && obj.node) {
-                            txt = obj.node.text || obj.node.content || obj.node.comment_text;
-                            let nUser = obj.node.user || obj.node.owner || {};
-                            uname = nUser.username || obj.node.username;
-                            avatar = nUser.profile_pic_url || avatar;
-                        }
+                        // ============== 核心修改：利用正则过滤掉纯表情符号/纯符号 ==============
+                        if (text && /[\p{L}\p{N}]/u.test(text) && !text.includes('http')) {
+                            const user = cNode.user || cNode.owner || {};
+                            const authorName = user.username || "ins_user";
+                            const avatar = user.profile_pic_url || (user.hd_profile_pic_url_info && user.hd_profile_pic_url_info.url) || "https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png";
+                            const likes = parseInt(cNode.comment_like_count || cNode.like_count || 0);
 
-                        // 如果确认是一条评论（有文本且有发评人）
-                        if (typeof txt === 'string' && txt.length > 0 && uname) {
-                            // 排除把帖子本身的文案当成评论抓进去
-                            let pTitleClean = typeof postTitle === 'string' ? postTitle.replace(/[\r\n]+/g, ' ').trim() : "";
-                            if (txt.replace(/[\r\n]+/g, ' ').trim() !== pTitleClean && txt !== postTitle) { 
-                                let fingerprint = txt.trim() + uname;
-                                if (!seenComments.has(fingerprint)) {
-                                    seenComments.add(fingerprint);
-                                    
-                                    // 万无一失的过滤：至少包含一个字母或数字才算有效文字，防止只有 emojis
-                                    if (/[\p{L}\p{N}]/u.test(txt) && !txt.includes('http')) {
-                                        comments.push({
-                                            author: uname,
-                                            avatar: avatar,
-                                            text: txt.replace(/\b[A-Z]{2,}\b/g, match => match.toLowerCase()),
-                                            likes: parseInt(obj.comment_like_count || obj.like_count || (obj.node ? (obj.node.comment_like_count || obj.node.like_count) : 0) || 0)
-                                        });
-                                    } else {
-                                        pureEmojiCount++;
-                                    }
-                                }
-                            }
-                        }
-                        
-                        // 强制递归向下挖掘，绝不放过任何一个子节点
-                        if (Array.isArray(obj)) {
-                            for (let i = 0; i < obj.length; i++) deepSearchComments(obj[i]);
-                        } else {
-                            for (let key in obj) {
-                                if (key === 'caption') continue; // 明确跳过发帖人 caption，防干扰
-                                deepSearchComments(obj[key]);
-                            }
+                            comments.push({
+                                author: authorName,
+                                avatar: avatar,
+                                text: text.replace(/\b[A-Z]{2,}\b/g, match => match.toLowerCase()),
+                                likes: likes
+                            });
                         }
                     }
-                    
-                    // 暴力翻遍两个接口返回的所有数据（哪怕 cData 失败了，有些 API 也会把评论塞在前一个 pData 里）
-                    if (pData) deepSearchComments(pData);
-                    if (cData) deepSearchComments(cData);
 
                     comments.sort((a, b) => b.likes - a.likes);
                     comments = comments.slice(0, 35);
-                    
-                    // ============ 增加硬核诊断弹窗（真相大白环节） ============
-                    if (comments.length === 0) {
-                        let msg = `⚠️ 抓取诊断报告：\n`;
-                        msg += `1. 深度扫描发现评论总数: ${seenComments.size}\n`;
-                        msg += `2. 被拦截的纯表情/纯符号: ${pureEmojiCount}\n`;
-                        msg += `3. 最终有效英文评论: 0\n\n`;
-                        
-                        if (seenComments.size === 0) {
-                            msg += `【分析结论】\n不管套得多深，API 返回的 JSON 里面确确实实没有哪怕一条评论数据！\n\n`;
-                            if (cErrorStr) {
-                                msg += `🚨 罪魁祸首 - 评论接口直接报错了:\n${cErrorStr}\n`;
-                            } else {
-                                let debugJson = cData ? JSON.stringify(cData).substring(0, 150) : "null";
-                                msg += `🔍 接口强行返回的数据前 150 字如下:\n${debugJson}...\n\n`;
-                                msg += `(真相只有一个：该 Reel 存在私密或年龄限制，导致 RapidAPI 节点无权拉取数据；或者它目前本身就是个坏掉的节点！)\n建议去 RapidAPI 网页上点一下 Test Endpoint 测测看。`;
-                            }
-                        } else {
-                            msg += `【分析结论】\n有评论，但因为全都是毫无意义的纯表情符号，已经被系统自动过滤清空了。`;
-                        }
-                        alert(msg);
-                    }
 
                     loadingBar.style.width = '75%';
                     const postObj = { title: postTitle, channel: postChannel, thumb: postThumb, url: postUrl, id: shortcode };
@@ -1048,7 +985,7 @@ def generate_index_template():
         .message-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 4px; }
         .author { font-size: 0.85rem; color: var(--muted); font-weight: 600; }
         .likes { font-size: 0.75rem; color: var(--accent); font-weight: bold; background: #fdf0f4; padding: 2px 6px; border-radius: 8px; }
-        .empty-state { text-align: center; color: var(--muted); padding: 40px 20px; line-height: 1.6; }
+        .empty-state { text-align: center; color: var(--muted); padding: 40px 20px; }
         
         .para-wrap { width: 100%; display: flex; flex-direction: column; align-items: flex-start; }
         .bubble { background: var(--card); padding: 10px 14px; border-radius: 4px 16px 16px 16px; font-size: 0.95rem; line-height: 1.5; color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.04); }
@@ -1083,7 +1020,7 @@ def generate_index_template():
             </div>
         </div>
         <div class="chat-container">
-            ${comments_html ? comments_html : '<div class="empty-state">暂无评论 👀<br><span style="font-size:12px;color:#bbb;">(已开启深度扫描，当前帖子/Reels接口真没返回有效评论数据)</span></div>'}
+            ${comments_html ? comments_html : '<div class="empty-state">暫无评论。</div>'}
         </div>
     </div>
     <script id="page-data" type="application/json">${pageDataStr}<` + `/script>
@@ -1101,7 +1038,7 @@ def generate_index_template():
     os.makedirs(BASE_DIR, exist_ok=True)
     with open(os.path.join(BASE_DIR, "index.html"), "w", encoding="utf-8") as f:
         f.write(html_template)
-    print("✅ `docs/index.html` Instagram 专用版更新完成！已植入深度掘地三尺 JSON 提取器和弹窗真实诊断。")
+    print("✅ `docs/index.html` Instagram 专用版更新完成！已彻底修复 Header 非法字符崩溃问题并更新短评抓取逻辑。")
 
 if __name__ == "__main__":
     generate_index_template()
