@@ -1,1 +1,56 @@
-1
+name: Rebuild Instagram Vibe Calendar Index
+
+# 触发条件：
+# 1. 监测到任何 .py 文件或依赖文件发生 push 时自动触发
+# 2. 每周一自动定时运行一次
+# 3. 允许在 GitHub 网页端的 Actions 页面手动点击运行
+on:
+  push:
+    paths:
+      - '**.py'            # 只要有任何 Python 脚本变动并推送就触发
+      - 'requirements.txt' # 依赖配置变动时触发
+    branches:
+      - main               # 你的主分支名称（如果是 master 请改成 master）
+
+  schedule:
+    - cron: '0 0 * * 1'    # 每周一 UTC 00:00 (北京时间早上 8:00) 运行
+
+  workflow_dispatch:       # 允许手动在 GitHub 网页点击 "Run workflow"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write      # 赋予 GitHub Actions 机器人提交与推送代码的权限
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          # Instagram_app.py 基于标准库开发，无需强制装第三方库，装 requests 备用
+          pip install requests
+
+      - name: Rebuild Instagram Calendar Index
+        # 扫描 docs/ 目录并自动重新生成最新的 docs/index.html 索引
+        run: python Instagram_app.py
+
+      - name: Commit and Push changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          # 暂存 docs 目录变动
+          git add docs/
+          
+          # 如果 index.html 或归档有变动，自动提交并推送；
+          # 附加 [skip ci] 防止机器人提交引发 Actions 无限死循环触发
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto rebuild Instagram vibe calendar index [skip ci]" && git push)
