@@ -1,4 +1,3 @@
-
 import os
 import json
 import base64
@@ -100,15 +99,13 @@ async function fetchGLM(text, apiKey, modelName) {
 
 async function executeAIPipeline(text) {
     const pref = localStorage.getItem('PREFERRED_AI') || 'groq';
-    
-    const groqKey = (localStorage.getItem('GROQ_API_KEY') || '').replace(/[^\x20-\x7E]/g, '');
-    const glmKey = (localStorage.getItem('GLM_API_KEY') || '').replace(/[^\x20-\x7E]/g, '');
-    const customKey = (localStorage.getItem('CUSTOM_API_KEY') || '').replace(/[^\x20-\x7E]/g, '');
-    
-    const groqModel = (localStorage.getItem('GROQ_MODEL') || 'llama-3.3-70b-versatile').trim();
-    const glmModel = (localStorage.getItem('GLM_MODEL') || 'GLM-4.5-Flash').trim();
-    const customUrl = (localStorage.getItem('CUSTOM_API_URL') || '').trim();
-    const customModel = (localStorage.getItem('CUSTOM_MODEL') || '').trim();
+    const groqKey = localStorage.getItem('GROQ_API_KEY') || '';
+    const glmKey = localStorage.getItem('GLM_API_KEY') || '';
+    const groqModel = localStorage.getItem('GROQ_MODEL') || 'llama-3.3-70b-versatile';
+    const glmModel = localStorage.getItem('GLM_MODEL') || 'GLM-4.5-Flash';
+    const customUrl = localStorage.getItem('CUSTOM_API_URL') || '';
+    const customKey = localStorage.getItem('CUSTOM_API_KEY') || '';
+    const customModel = localStorage.getItem('CUSTOM_MODEL') || '';
 
     if ((!groqKey && !glmKey && !customKey) || (!groqModel && !glmModel && !customModel)) throw new Error('MISSING_KEYS_OR_MODELS');
 
@@ -156,9 +153,9 @@ function initAnnotations() {
                     if (!confirmOverwrite) return;
                 }
                 
-                const groqKey = (localStorage.getItem('GROQ_API_KEY') || '').trim();
-                const glmKey = (localStorage.getItem('GLM_API_KEY') || '').trim();
-                const customKey = (localStorage.getItem('CUSTOM_API_KEY') || '').trim();
+                const groqKey = localStorage.getItem('GROQ_API_KEY') || '';
+                const glmKey = localStorage.getItem('GLM_API_KEY') || '';
+                const customKey = localStorage.getItem('CUSTOM_API_KEY') || '';
 
                 if (!groqKey && !glmKey && !customKey) { alert('⚠️ 请先返回日历配置中心设置 AI API Key！'); return; }
 
@@ -300,7 +297,7 @@ function reconstructSelfHTML() {
         </div>
 
         <div class="chat-container">
-            ${comments_html ? comments_html : '<div class="empty-state">暫无评论。</div>'}
+            ${comments_html ? comments_html : '<div class="empty-state">暫無高價值評論。</div>'}
         </div>
     </div>
     <script id="page-data" type="application/json">${newJsonStr}<\/script>
@@ -310,8 +307,8 @@ function reconstructSelfHTML() {
 }
 
 async function syncToGitHub() {
-    const token = (localStorage.getItem('GH_TOKEN') || '').replace(/[^\x20-\x7E]/g, '');
-    const owner = (localStorage.getItem('GH_OWNER') || '').replace(/[^\x20-\x7E]/g, '');
+    const token = localStorage.getItem('GH_TOKEN');
+    const owner = localStorage.getItem('GH_OWNER');
     const repo = 'Instagram-File';
     
     if(!token || !owner) { alert('缺少 GitHub Token，无法同步！'); return; }
@@ -368,7 +365,7 @@ def generate_index_template():
                             f_year, f_month, f_day = str(int(parts[0])), str(int(parts[1])), str(int(parts[2]))
                             time_str = f"{parts[3][:2]}:{parts[3][2:4]}"
                             file_path = f"{year}/{month}/{file}"
-                            title = "📸 Instagram 贴文"
+                            title = "📸 Instagram 贴文精读"
                             
                             if f_year not in archive_data: archive_data[f_year] = {}
                             if f_month not in archive_data[f_year]: archive_data[f_year][f_month] = {}
@@ -434,9 +431,9 @@ def generate_index_template():
         .day-cell.has-news .dot { display: block; }
         
         .news-section { padding: 0 15px; }
-        .news-item-wrapper { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; width: 100%; box-sizing: border-box; }
-        .news-item { flex: 1; min-width: 0; background: var(--card); border-radius: 14px; padding: 16px; display: flex; align-items: center; text-decoration: none; color: var(--text); box-shadow: 0 2px 8px rgba(0,0,0,0.03); border-left: 4px solid var(--primary); overflow: hidden; }
-        .news-title { font-size: 15px; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: bold; display: block; width: 100%; }
+        .news-item-wrapper { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+        .news-item { flex: 1; background: var(--card); border-radius: 14px; padding: 18px 16px; display: flex; align-items: center; text-decoration: none; color: var(--text); box-shadow: 0 2px 8px rgba(0,0,0,0.03); border-left: 4px solid var(--primary); }
+        .news-title { font-size: 15px; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: bold; flex: 1; }
         .delete-btn { background: #ff3b30; color: white; border: none; border-radius: 10px; padding: 0 15px; height: 54px; font-size: 16px; cursor: pointer; display: none; }
         
         .empty-state { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px; background: var(--card); border-radius: 14px; }
@@ -564,21 +561,29 @@ def generate_index_template():
 
         function saveConfigAndNotify(e) {
             if (e) { e.preventDefault(); e.stopPropagation(); }
-            // 写入本地存储前也做一次清理，防手滑
-            localStorage.setItem('INS_RAPIDAPI_KEY', (document.getElementById('cfgRapidKey').value || '').trim().replace(/[^\x20-\x7E]/g, ''));
-            localStorage.setItem('INS_RAPIDAPI_HOST', (document.getElementById('cfgRapidHost').value || '').trim().replace(/[^\x20-\x7E]/g, '') || 'instagram360.p.rapidapi.com');
-            localStorage.setItem('GH_TOKEN', (document.getElementById('cfgGhToken').value || '').trim().replace(/[^\x20-\x7E]/g, ''));
-            localStorage.setItem('GH_OWNER', (document.getElementById('cfgGhOwner').value || '').trim().replace(/[^\x20-\x7E]/g, ''));
+            
+            // 确保去除所有非法不可见字符和多余空格
+            const sanitize = str => (str || '').replace(/[^\x20-\x7E]/g, '').trim();
+            
+            localStorage.setItem('INS_RAPIDAPI_KEY', sanitize(document.getElementById('cfgRapidKey').value));
+            
+            // 强制保底机制：如果没有值，或者还是旧版的值，强行写成新的
+            let hostVal = sanitize(document.getElementById('cfgRapidHost').value);
+            if (!hostVal || hostVal.includes('instagram-scraper-ai1')) hostVal = 'instagram360.p.rapidapi.com';
+            localStorage.setItem('INS_RAPIDAPI_HOST', hostVal);
+
+            localStorage.setItem('GH_TOKEN', sanitize(document.getElementById('cfgGhToken').value));
+            localStorage.setItem('GH_OWNER', sanitize(document.getElementById('cfgGhOwner').value));
             
             localStorage.setItem('PREFERRED_AI', document.getElementById('cfgPrefAI').value || 'groq');
-            localStorage.setItem('CUSTOM_API_URL', (document.getElementById('cfgCustomURL').value || '').trim());
-            localStorage.setItem('CUSTOM_API_KEY', (document.getElementById('cfgCustomKey').value || '').trim().replace(/[^\x20-\x7E]/g, ''));
-            localStorage.setItem('CUSTOM_MODEL', (document.getElementById('cfgCustomModel').value || '').trim());
-            localStorage.setItem('GROQ_API_KEY', (document.getElementById('cfgGroq').value || '').trim().replace(/[^\x20-\x7E]/g, ''));
-            localStorage.setItem('GROQ_MODEL', (document.getElementById('cfgGroqModel').value || '').trim());
-            localStorage.setItem('GLM_API_KEY', (document.getElementById('cfgGLM').value || '').trim().replace(/[^\x20-\x7E]/g, ''));
-            localStorage.setItem('GLM_MODEL', (document.getElementById('cfgGLMModel').value || '').trim());
-
+            localStorage.setItem('CUSTOM_API_URL', document.getElementById('cfgCustomURL').value.trim());
+            localStorage.setItem('CUSTOM_API_KEY', sanitize(document.getElementById('cfgCustomKey').value));
+            localStorage.setItem('CUSTOM_MODEL', document.getElementById('cfgCustomModel').value.trim());
+            localStorage.setItem('GROQ_API_KEY', sanitize(document.getElementById('cfgGroq').value));
+            localStorage.setItem('GROQ_MODEL', document.getElementById('cfgGroqModel').value.trim());
+            localStorage.setItem('GLM_API_KEY', sanitize(document.getElementById('cfgGLM').value));
+            localStorage.setItem('GLM_MODEL', document.getElementById('cfgGLMModel').value.trim());
+            
             closeConfigModal();
             popToast('配置已本地保存！', 1200);
         }
@@ -672,8 +677,8 @@ def generate_index_template():
         initSelects(); forceRender();
 
         async function syncDeleteToGithub(fileRelPath) {
-            const ghToken = (localStorage.getItem('GH_TOKEN') || '').replace(/[^\x20-\x7E]/g, '');
-            const ghOwner = (localStorage.getItem('GH_OWNER') || '').replace(/[^\x20-\x7E]/g, '');
+            const ghToken = localStorage.getItem('GH_TOKEN');
+            const ghOwner = localStorage.getItem('GH_OWNER');
             const ghRepo = 'Instagram-File';
             if (!ghToken || !ghOwner) return;
 
@@ -718,12 +723,20 @@ def generate_index_template():
                 const rawUrl = this.value.trim();
                 if (!rawUrl) return;
 
-                const rapidKey = (localStorage.getItem('INS_RAPIDAPI_KEY') || '').replace(/[^\x20-\x7E]/g, '');
-                const rapidHost = (localStorage.getItem('INS_RAPIDAPI_HOST') || 'instagram360.p.rapidapi.com').replace(/[^\x20-\x7E]/g, '');
-                const ghToken = (localStorage.getItem('GH_TOKEN') || '').replace(/[^\x20-\x7E]/g, '');
-                const ghOwner = (localStorage.getItem('GH_OWNER') || '').replace(/[^\x20-\x7E]/g, '');
+                const sanitize = str => (str || '').replace(/[^\x20-\x7E]/g, '').trim();
+
+                const rapidKey = sanitize(localStorage.getItem('INS_RAPIDAPI_KEY'));
+                let rapidHost = sanitize(localStorage.getItem('INS_RAPIDAPI_HOST'));
+                const ghToken = sanitize(localStorage.getItem('GH_TOKEN'));
+                const ghOwner = sanitize(localStorage.getItem('GH_OWNER'));
                 const ghRepo = 'Instagram-File';
                 
+                // 【核心修正】强制覆盖缓存里的旧版 Host，避免产生 404 / CORS 错误
+                if (!rapidHost || rapidHost.includes('instagram-scraper-ai1')) {
+                    rapidHost = 'instagram360.p.rapidapi.com';
+                    localStorage.setItem('INS_RAPIDAPI_HOST', rapidHost);
+                }
+
                 if (!rapidKey || !ghToken || !ghOwner) {
                     alert('⚠️ 请先点击右上角 ⚙️ 配置 Instagram RapidAPI Key 和 GitHub Token！');
                     openConfigModal();
@@ -746,16 +759,13 @@ def generate_index_template():
                     let postThumb = "https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png";
                     let postUrl = `https://www.instagram.com/p/${shortcode}/`;
 
-                    // ============================================
-                    // 核心修改点1：获取 Detail，彻底移除 'Content-Type': 'application/json'
-                    // ============================================
+                    // ===============================================
+                    // 步骤 1: 完美适配 v2 detail 请求 (instagram360 API)
+                    // ===============================================
                     try {
                         const pRes = await fetch(`https://${rapidHost}/postdetail/?code_or_url=${shortcode}`, {
                             method: 'GET',
-                            headers: { 
-                                'x-rapidapi-host': rapidHost, 
-                                'x-rapidapi-key': rapidKey
-                            }
+                            headers: { 'x-rapidapi-host': rapidHost, 'x-rapidapi-key': rapidKey }
                         });
                         
                         if (pRes.ok) {
@@ -781,7 +791,7 @@ def generate_index_template():
                             }
                         }
                     } catch(err) {
-                        console.warn("详情接口受阻，降级使用默认标题抓取评论:", err);
+                        console.warn("详情接口获取失败，降级使用默认标题:", err);
                     }
                     
                     if (typeof postTitle === 'string') {
@@ -793,18 +803,18 @@ def generate_index_template():
 
                     loadingBar.style.width = '55%';
 
-                    // ============================================
-                    // 核心修改点2：获取 Comments，彻底移除 'Content-Type': 'application/json'
-                    // ============================================
+                    // ===============================================
+                    // 步骤 2: 完美适配 v2 comments 请求 (instagram360 API)
+                    // ===============================================
                     const cRes = await fetch(`https://${rapidHost}/postcomments/?code_or_url=${shortcode}`, {
                         method: 'GET',
-                        headers: { 
-                            'x-rapidapi-host': rapidHost, 
-                            'x-rapidapi-key': rapidKey
-                        }
+                        headers: { 'x-rapidapi-host': rapidHost, 'x-rapidapi-key': rapidKey }
                     });
 
-                    if (!cRes.ok) throw new Error(`RapidAPI 获取评论失败 (状态码: ${cRes.status})`);
+                    if (!cRes.ok) {
+                        throw new Error(`网络或接口拒绝请求 (状态码: ${cRes.status})`);
+                    }
+                    
                     const cData = await cRes.json();
                     
                     let rawComments = [];
@@ -820,7 +830,7 @@ def generate_index_template():
                         const cNode = c.node || c;
                         const text = cNode.text || '';
                         
-                        if (text && /[\p{L}\p{N}]/u.test(text) && !text.includes('http')) {
+                        if (text && text.split(' ').length > 2 && !text.includes('http')) {
                             const user = cNode.user || cNode.owner || {};
                             const authorName = user.username || "ins_user";
                             const avatar = user.profile_pic_url || (user.hd_profile_pic_url_info && user.hd_profile_pic_url_info.url) || "https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png";
@@ -872,7 +882,7 @@ def generate_index_template():
                     if (!archiveObj[yearStr][monthStr]) archiveObj[yearStr][monthStr] = {};
                     if (!archiveObj[yearStr][monthStr][dayStr]) archiveObj[yearStr][monthStr][dayStr] = [];
                     
-                    const newItem = { time: hhmmStr, path: fileRelPath, title: `📸 ${postTitle}` };
+                    const newItem = { time: hhmmStr, path: fileRelPath, title: `📸 Instagram 精读: ${postTitle}` };
                     archiveObj[yearStr][monthStr][dayStr].unshift(newItem);
                     
                     const newIdxContent = idxContent.substring(0, dataStart) + JSON.stringify(archiveObj) + idxContent.substring(dataEnd);
@@ -1024,7 +1034,7 @@ def generate_index_template():
         </div>
 
         <div class="chat-container">
-            ${comments_html ? comments_html : '<div class="empty-state">暫无评论。</div>'}
+            ${comments_html ? comments_html : '<div class="empty-state">暫無高價值評論。</div>'}
         </div>
     </div>
     <script id="page-data" type="application/json">${pageDataStr}<` + `/script>
@@ -1042,7 +1052,7 @@ def generate_index_template():
     os.makedirs(BASE_DIR, exist_ok=True)
     with open(os.path.join(BASE_DIR, "index.html"), "w", encoding="utf-8") as f:
         f.write(html_template)
-    print("✅ `docs/index.html` CORS 跨域问题已修复！成功移除了 GET 请求中导致预检失败的 Content-Type。")
+    print("✅ `docs/index.html` Instagram 专用版更新完成！已完美适配 v2 详情与 comments 端点。")
 
 if __name__ == "__main__":
     generate_index_template()
