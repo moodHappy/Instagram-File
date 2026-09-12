@@ -362,7 +362,7 @@ def generate_index_template():
                             f_year, f_month, f_day = str(int(parts[0])), str(int(parts[1])), str(int(parts[2]))
                             time_str = f"{parts[3][:2]}:{parts[3][2:4]}"
                             file_path = f"{year}/{month}/{file}"
-                            title = "📸 Instagram 贴文精读"
+                            title = "📸 Instagram 贴文"
 
                             if f_year not in archive_data: archive_data[f_year] = {}
                             if f_month not in archive_data[f_year]: archive_data[f_year][f_month] = {}
@@ -427,9 +427,9 @@ def generate_index_template():
         .day-cell.has-news .dot { display: block; }
         
         .news-section { padding: 0 15px; }
-        .news-item-wrapper { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-        .news-item { flex: 1; background: var(--card); border-radius: 14px; padding: 18px 16px; display: flex; align-items: center; text-decoration: none; color: var(--text); box-shadow: 0 2px 8px rgba(0,0,0,0.03); border-left: 4px solid var(--primary); }
-        .news-title { font-size: 15px; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: bold; flex: 1; }
+        .news-item-wrapper { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; width: 100%; box-sizing: border-box; }
+        .news-item { flex: 1; min-width: 0; background: var(--card); border-radius: 14px; padding: 16px; display: flex; align-items: center; text-decoration: none; color: var(--text); box-shadow: 0 2px 8px rgba(0,0,0,0.03); border-left: 4px solid var(--primary); overflow: hidden; }
+        .news-title { font-size: 15px; color: #333; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: bold; display: block; width: 100%; }
         .delete-btn { background: #ff3b30; color: white; border: none; border-radius: 10px; padding: 0 15px; height: 54px; font-size: 16px; cursor: pointer; display: none; }
         
         .empty-state { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 14px; background: var(--card); border-radius: 14px; }
@@ -782,11 +782,10 @@ def generate_index_template():
                         console.warn("详情接口受阻，直接使用算法计算的 mediaId 抓取评论:", err);
                     }
                     
-                    // ================= 新增：处理/截断标题防止溢出 =================
                     if (typeof postTitle === 'string') {
-                        postTitle = postTitle.replace(/[\r\n]+/g, ' ').trim(); // 移除多余换行符
+                        postTitle = postTitle.replace(/[\r\n]+/g, ' ').trim();
                         if (postTitle.length > 40) {
-                            postTitle = postTitle.substring(0, 40) + '...'; // 超出 40 个字符后进行截断
+                            postTitle = postTitle.substring(0, 40) + '...';
                         }
                     }
 
@@ -816,8 +815,6 @@ def generate_index_template():
                         const cNode = c.node || c;
                         const text = cNode.text || '';
                         
-                        // ================= 核心修改：利用正则过滤掉纯表情符号/纯符号 =================
-                        // \p{L}|\p{N} 支持识别全部语言的字母/汉字/日假名和数字。如果只包含表情，就会过滤掉。
                         if (text && /[\p{L}\p{N}]/u.test(text) && !text.includes('http')) {
                             const user = cNode.user || cNode.owner || {};
                             const authorName = user.username || "ins_user";
@@ -868,7 +865,7 @@ def generate_index_template():
                     if (!archiveObj[yearStr][monthStr]) archiveObj[yearStr][monthStr] = {};
                     if (!archiveObj[yearStr][monthStr][dayStr]) archiveObj[yearStr][monthStr][dayStr] = [];
                     
-                    const newItem = { time: hhmmStr, path: fileRelPath, title: `📸 Instagram 精读: ${postTitle}` };
+                    const newItem = { time: hhmmStr, path: fileRelPath, title: `📸 ${postTitle}` };
                     archiveObj[yearStr][monthStr][dayStr].unshift(newItem);
                     const newIdxContent = idxContent.substring(0, dataStart) + JSON.stringify(archiveObj) + idxContent.substring(dataEnd);
                     
@@ -1016,7 +1013,7 @@ def generate_index_template():
             </div>
         </div>
         <div class="chat-container">
-            ${comments_html ? comments_html : '<div class="empty-state">暫無評論。</div>'}
+            ${comments_html ? comments_html : '<div class="empty-state">暫无评论。</div>'}
         </div>
     </div>
     <script id="page-data" type="application/json">${pageDataStr}<` + `/script>
