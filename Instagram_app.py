@@ -309,7 +309,7 @@ function reconstructSelfHTML() {
 async function syncToGitHub() {
     const token = localStorage.getItem('GH_TOKEN');
     const owner = localStorage.getItem('GH_OWNER');
-    const repo = 'Instagram-File'; // 【写死】
+    const repo = 'Instagram-File';
     
     if(!token || !owner) { alert('缺少 GitHub Token，无法同步！'); return; }
 
@@ -462,7 +462,7 @@ def generate_index_template():
             <p style="font-size:12px; color:#888; margin-top:-10px; margin-bottom:15px;">专属配置已隔离，不会与 Twitter/TikTok 产生覆盖。</p>
             
             <div class="form-group"><label>Instagram RapidAPI Key</label><input type="password" id="cfgRapidKey" placeholder="例如 a52da3c..."></div>
-            <div class="form-group"><label>Instagram RapidAPI Host</label><input type="text" id="cfgRapidHost" placeholder="social-premium-api.p.rapidapi.com"></div>
+            <div class="form-group"><label>Instagram RapidAPI Host</label><input type="text" id="cfgRapidHost" placeholder="instagram-scraper-ai1.p.rapidapi.com"></div>
             
             <div style="border-top:1px dashed #ddd; margin: 15px 0;"></div>
             <div class="form-group"><label>GitHub Personal Access Token</label><input type="password" id="cfgGhToken" placeholder="ghp_..."></div>
@@ -537,9 +537,8 @@ def generate_index_template():
         }
 
         function openConfigModal() {
-            // 【独立前缀 INS_ 隔离存储】
             document.getElementById('cfgRapidKey').value = localStorage.getItem('INS_RAPIDAPI_KEY') || '';
-            document.getElementById('cfgRapidHost').value = localStorage.getItem('INS_RAPIDAPI_HOST') || 'social-premium-api.p.rapidapi.com';
+            document.getElementById('cfgRapidHost').value = localStorage.getItem('INS_RAPIDAPI_HOST') || 'instagram-scraper-ai1.p.rapidapi.com';
             document.getElementById('cfgGhToken').value = localStorage.getItem('GH_TOKEN') || '';
             document.getElementById('cfgGhOwner').value = localStorage.getItem('GH_OWNER') || '';
             
@@ -558,9 +557,8 @@ def generate_index_template():
 
         function saveConfigAndNotify(e) {
             if (e) { e.preventDefault(); e.stopPropagation(); }
-            // 【独立前缀 INS_ 隔离存储】
             localStorage.setItem('INS_RAPIDAPI_KEY', (document.getElementById('cfgRapidKey').value || '').trim());
-            localStorage.setItem('INS_RAPIDAPI_HOST', (document.getElementById('cfgRapidHost').value || '').trim() || 'social-premium-api.p.rapidapi.com');
+            localStorage.setItem('INS_RAPIDAPI_HOST', (document.getElementById('cfgRapidHost').value || '').trim() || 'instagram-scraper-ai1.p.rapidapi.com');
             localStorage.setItem('GH_TOKEN', (document.getElementById('cfgGhToken').value || '').trim());
             localStorage.setItem('GH_OWNER', (document.getElementById('cfgGhOwner').value || '').trim());
             
@@ -666,7 +664,7 @@ def generate_index_template():
         async function syncDeleteToGithub(fileRelPath) {
             const ghToken = localStorage.getItem('GH_TOKEN');
             const ghOwner = localStorage.getItem('GH_OWNER');
-            const ghRepo = 'Instagram-File'; // 【写死】
+            const ghRepo = 'Instagram-File';
             if (!ghToken || !ghOwner) return;
             try {
                 const targetFilePath = `docs/${fileRelPath}`;
@@ -698,7 +696,7 @@ def generate_index_template():
         function extractInstagramShortcode(url) {
             const match = url.match(/(?:p|reel|reels)\/([A-Za-z0-9_-]+)/);
             if (match && match[1]) return match[1];
-            if (/^[A-Za-z0-9_-]{10,12}$/.test(url.trim())) return url.trim();
+            if (/^[A-Za-z0-9_-]{9,15}$/.test(url.trim())) return url.trim();
             return null;
         }
 
@@ -707,12 +705,11 @@ def generate_index_template():
                 const rawUrl = this.value.trim();
                 if (!rawUrl) return;
 
-                // 【读取独立存储的 INS Key 和 Host】
                 const rapidKey = localStorage.getItem('INS_RAPIDAPI_KEY');
-                const rapidHost = localStorage.getItem('INS_RAPIDAPI_HOST') || 'social-premium-api.p.rapidapi.com';
+                const rapidHost = localStorage.getItem('INS_RAPIDAPI_HOST') || 'instagram-scraper-ai1.p.rapidapi.com';
                 const ghToken = localStorage.getItem('GH_TOKEN');
                 const ghOwner = localStorage.getItem('GH_OWNER');
-                const ghRepo = 'Instagram-File'; // 【写死】
+                const ghRepo = 'Instagram-File';
                 
                 if (!rapidKey || !ghToken || !ghOwner) {
                     alert('⚠️ 请先点击右上角 ⚙️ 配置 Instagram RapidAPI Key 和 GitHub Token！');
@@ -731,46 +728,73 @@ def generate_index_template():
                 this.disabled = true;
 
                 try {
-                    // 1. 获取帖子详情
+                    // 1. 获取帖子详情（基于 /media_info_from_shortcode/v1/ 端点）
                     let postTitle = `Instagram Post (${shortcode})`;
                     let postChannel = "@instagram_user";
                     let postThumb = "https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png";
                     let postUrl = `https://www.instagram.com/p/${shortcode}/`;
+                    let mediaId = null;
 
                     try {
-                        const pRes = await fetch(`https://${rapidHost}/v1/post_info?code_or_id_or_url=${encodeURIComponent(rawUrl)}`, {
+                        const pRes = await fetch(`https://${rapidHost}/media_info_from_shortcode/v1/?shortcode=${shortcode}&raw=true`, {
                             headers: { 'x-rapidapi-host': rapidHost, 'x-rapidapi-key': rapidKey }
                         });
                         if (pRes.ok) {
                             const pData = await pRes.json();
-                            const item = pData.data || pData;
-                            if (item) {
-                                postTitle = item.caption ? item.caption.text : (item.title || item.text || postTitle);
-                                const user = item.user || item.owner || {};
+                            const item = pData.items ? pData.items[0] : (pData.data || pData);
+                            const node = (item && item.node) ? item.node : item;
+                            if (node) {
+                                mediaId = node.id || node.pk || (node.id && String(node.id).split('_')[0]);
+                                if (node.caption) {
+                                    postTitle = typeof node.caption === 'string' ? node.caption : (node.caption.text || postTitle);
+                                } else if (node.title) {
+                                    postTitle = node.title;
+                                }
+                                const user = node.user || node.owner || {};
                                 postChannel = '@' + (user.username || 'instagrammer');
-                                postThumb = item.thumbnail_url || (item.image_versions2 && item.image_versions2.candidates && item.image_versions2.candidates[0].url) || item.display_url || postThumb;
+                                
+                                if (node.image_versions2 && node.image_versions2.candidates && node.image_versions2.candidates.length > 0) {
+                                    postThumb = node.image_versions2.candidates[0].url;
+                                } else if (node.display_uri || node.display_url) {
+                                    postThumb = node.display_uri || node.display_url;
+                                }
                             }
                         }
-                    } catch(err) {}
+                    } catch(err) {
+                        console.warn("获取帖子信息失败，尝试继续获取评论:", err);
+                    }
 
-                    loadingBar.style.width = '60%';
+                    loadingBar.style.width = '55%';
 
-                    // 2. 获取评论
-                    const cRes = await fetch(`https://${rapidHost}/v1/comments?code_or_id_or_url=${encodeURIComponent(rawUrl)}`, {
+                    // 2. 获取评论（基于 /media/comments/ 端点）
+                    if (!mediaId) {
+                        throw new Error(`未能从 Shortcode (${shortcode}) 解析出对应的 Media ID，请检查帖子链接是否公开可用！`);
+                    }
+
+                    const cleanMediaId = String(mediaId).split('_')[0];
+                    const cRes = await fetch(`https://${rapidHost}/media/comments/?media_id=${cleanMediaId}`, {
                         headers: { 'x-rapidapi-host': rapidHost, 'x-rapidapi-key': rapidKey }
                     });
                     if (!cRes.ok) throw new Error(`RapidAPI 获取评论失败 (状态码: ${cRes.status})`);
                     const cData = await cRes.json();
-                    const rawComments = (cData.data && (cData.data.items || cData.data.comments)) || cData.comments || [];
+                    
+                    // 兼容各类返回的评论列表结构
+                    let rawComments = [];
+                    if (Array.isArray(cData)) rawComments = cData;
+                    else if (cData.comments) rawComments = cData.comments;
+                    else if (cData.data && cData.data.comments) rawComments = cData.data.comments;
+                    else if (cData.data && cData.data.items) rawComments = cData.data.items;
+                    else if (cData.items) rawComments = cData.items;
 
                     let comments = [];
                     for (let c of rawComments) {
-                        const text = c.text || '';
+                        const cNode = c.node || c;
+                        const text = cNode.text || '';
                         if (text && text.split(' ').length > 2 && !text.includes('http')) {
-                            const user = c.user || {};
+                            const user = cNode.user || cNode.owner || {};
                             const authorName = user.username || "ins_user";
-                            const avatar = user.profile_pic_url || "https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png";
-                            const likes = parseInt(c.comment_like_count || c.like_count || 0);
+                            const avatar = user.profile_pic_url || (user.hd_profile_pic_url_info && user.hd_profile_pic_url_info.url) || "https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png";
+                            const likes = parseInt(cNode.comment_like_count || cNode.like_count || 0);
 
                             comments.push({
                                 author: authorName,
@@ -982,7 +1006,7 @@ def generate_index_template():
     os.makedirs(BASE_DIR, exist_ok=True)
     with open(os.path.join(BASE_DIR, "index.html"), "w", encoding="utf-8") as f:
         f.write(html_template)
-    print("✅ `docs/index.html` Instagram 专用版日历枢纽生成完成！已做 Key 隔离与仓库锁定。")
+    print("✅ `docs/index.html` Instagram 专用版日历枢纽生成完成！已精准对齐 RapidAPI 端点。")
 
 if __name__ == "__main__":
     generate_index_template()
