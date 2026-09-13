@@ -137,6 +137,23 @@ async function executeAIPipeline(text) {
     }
 }
 
+function getRandomAestheticSVG(title) {
+    const palettes = [
+        ['#f09433', '#e6683c', '#dc2743', '#cc2366', '#bc1888'],
+        ['#833ab4', '#fd1d1d', '#fcb045'],
+        ['#4158D0', '#C850C0', '#FFCC70'],
+        ['#0093E9', '#80D0C7'],
+        ['#FA8BFF', '#2BD2FF', '#2BFF88'],
+        ['#FBAB7E', '#F7CE68'],
+        ['#667eea', '#764ba2']
+    ];
+    const g = palettes[Math.floor(Math.random() * palettes.length)];
+    const stops = g.map((c, i) => `<stop offset="${Math.round(i/(g.length-1)*100)}%" stop-color="${c}"/>`).join('');
+    const safeTitle = (title || 'Instagram Post').replace(/["<>&]/g, '').trim().substring(0, 26);
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="100%" height="100%"><defs><linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">${stops}</linearGradient><radialGradient id="r" cx="50%" cy="50%" r="60%"><stop offset="0%" stop-color="#fff" stop-opacity="0.25"/><stop offset="100%" stop-color="#fff" stop-opacity="0"/></radialGradient></defs><rect width="100%" height="100%" fill="url(#bg)"/><circle cx="400" cy="225" r="300" fill="url(#r)"/><g transform="translate(365, 140) scale(1.3)" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="52" height="52" rx="14"/><circle cx="28" cy="28" r="12"/><circle cx="43" cy="13" r="3" fill="#fff"/></g><text x="50%" y="280" fill="#fff" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="24" font-weight="bold" text-anchor="middle" letter-spacing="1">INSTAGRAM ARCHIVE</text><text x="50%" y="318" fill="rgba(255,255,255,0.85)" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="16" text-anchor="middle">${safeTitle}</text></svg>`;
+    return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+}
+
 function initAnnotations() {
     document.querySelectorAll('.para-wrap').forEach(wrap => {
         const view = wrap.querySelector('.anno-view');
@@ -248,12 +265,13 @@ function reconstructSelfHTML() {
     const engineText = document.getElementById('matrix-engine').textContent;
     const styleText = document.querySelector('style').textContent;
     const titleText = document.title;
+    const fallbackSvg = getRandomAestheticSVG(pageData.post.title);
 
     let comments_html = "";
     pageData.comments.forEach(c => {
         comments_html += `
         <div class="chat-message">
-            <img src="${escapeHTML(c.avatar)}" class="avatar" alt="avatar" loading="lazy" referrerpolicy="no-referrer" onerror="this.src='https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png';">
+            <img src="${escapeHTML(c.avatar)}" class="avatar" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.src='https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png';">
             <div class="message-content">
                 <div class="message-header">
                     <span class="author">${escapeHTML(c.author)}</span>
@@ -288,7 +306,15 @@ function reconstructSelfHTML() {
     <div class="container">
         <h2 style="text-align: center; margin-bottom: 25px; color: #333;">📅 ${pageData.year}-${String(pageData.month).padStart(2,'0')}-${String(pageData.day).padStart(2,'0')}</h2>
         <div class="post-card">
-            <a href="${escapeHTML(pageData.post.url)}" target="_blank"><img src="${escapeHTML(pageData.post.thumb)}" class="post-thumb" style="min-height: 250px; background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); font-size: 0;" alt="Thumbnail" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://picsum.photos/seed/' + Math.random().toString(36).substr(2, 6) + '/800/600'; this.title='原图已失效，已自动替换为随机美化占位图';"></a>
+            <a href="${escapeHTML(pageData.post.url)}" target="_blank" style="display:block; overflow:hidden;">
+                <img src="${escapeHTML(pageData.post.thumb)}"
+                     class="post-thumb"
+                     alt=""
+                     referrerpolicy="no-referrer"
+                     data-raw-src="${escapeHTML(pageData.post.thumb)}"
+                     data-fallback="${fallbackSvg}"
+                     onerror="if(!this.dataset.triedProxy && this.dataset.rawSrc && !this.dataset.rawSrc.startsWith('data:')){ this.dataset.triedProxy='1'; this.src='https://images.weserv.nl/?url=' + encodeURIComponent(this.dataset.rawSrc) + '&w=800'; } else { this.onerror=null; this.src=this.dataset.fallback; }">
+            </a>
             <div class="post-info">
                 <span class="p-channel">${escapeHTML(pageData.post.channel)}</span>
                 <h1 class="p-title">${escapeHTML(pageData.post.title)}</h1>
@@ -532,6 +558,23 @@ def generate_index_template():
         const today = new Date();
         const AppState = { year: today.getFullYear(), month: today.getMonth() + 1, day: today.getDate(), deleteMode: false };
 
+        function getRandomAestheticSVG(title) {
+            const palettes = [
+                ['#f09433', '#e6683c', '#dc2743', '#cc2366', '#bc1888'],
+                ['#833ab4', '#fd1d1d', '#fcb045'],
+                ['#4158D0', '#C850C0', '#FFCC70'],
+                ['#0093E9', '#80D0C7'],
+                ['#FA8BFF', '#2BD2FF', '#2BFF88'],
+                ['#FBAB7E', '#F7CE68'],
+                ['#667eea', '#764ba2']
+            ];
+            const g = palettes[Math.floor(Math.random() * palettes.length)];
+            const stops = g.map((c, i) => `<stop offset="${Math.round(i/(g.length-1)*100)}%" stop-color="${c}"/>`).join('');
+            const safeTitle = (title || 'Instagram Post').replace(/["<>&]/g, '').trim().substring(0, 26);
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="100%" height="100%"><defs><linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">${stops}</linearGradient><radialGradient id="r" cx="50%" cy="50%" r="60%"><stop offset="0%" stop-color="#fff" stop-opacity="0.25"/><stop offset="100%" stop-color="#fff" stop-opacity="0"/></radialGradient></defs><rect width="100%" height="100%" fill="url(#bg)"/><circle cx="400" cy="225" r="300" fill="url(#r)"/><g transform="translate(365, 140) scale(1.3)" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="52" height="52" rx="14"/><circle cx="28" cy="28" r="12"/><circle cx="43" cy="13" r="3" fill="#fff"/></g><text x="50%" y="280" fill="#fff" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="24" font-weight="bold" text-anchor="middle" letter-spacing="1">INSTAGRAM ARCHIVE</text><text x="50%" y="318" fill="rgba(255,255,255,0.85)" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="16" text-anchor="middle">${safeTitle}</text></svg>`;
+            return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+        }
+
         function popToast(msg, duration = 1200) {
             const overlay = document.getElementById('toastOverlay');
             document.getElementById('toastText').innerText = msg;
@@ -732,38 +775,51 @@ def generate_index_template():
                 try {
                     let postTitle = `Instagram Post (${shortcode})`;
                     let postChannel = "@instagram_user";
-                    let postThumb = "https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png";
+                    let postThumb = "";
                     let postUrl = `https://www.instagram.com/p/${shortcode}/`;
+                    let postNode = null;
 
-                    // ================= 步骤 1：精确匹配媒体数据 =================
+                    // ================= 步骤 1：全结构解包媒体数据 =================
                     try {
                         const pRes = await fetch(`https://${rapidHost}/get_media_data_v2.php?media_code=${shortcode}`, {
                             headers: { 'x-rapidapi-host': rapidHost, 'x-rapidapi-key': rapidKey }
                         });
                         if (pRes.ok) {
                             const pData = await pRes.json();
-                            const root = (pData.data && !pData.id) ? pData.data : pData;
-                            const item = root.items ? root.items[0] : root;
-                            const node = (item && item.node) ? item.node : item;
+                            let node = pData;
+                            if (node && node.data) node = node.data;
+                            if (node && node.xdt_shortcode_media) node = node.xdt_shortcode_media;
+                            else if (node && node.shortcode_media) node = node.shortcode_media;
+                            else if (node && node.graphql && node.graphql.shortcode_media) node = node.graphql.shortcode_media;
+                            else if (node && node.items && Array.isArray(node.items) && node.items.length > 0) node = node.items[0];
+                            if (node && node.node) node = node.node;
 
-                            // 1. 精确提取 Caption / 描述
+                            postNode = node;
+
+                            // 1. 深度提取 Caption / 描述
                             if (node.edge_media_to_caption && node.edge_media_to_caption.edges && node.edge_media_to_caption.edges.length > 0) {
                                 postTitle = node.edge_media_to_caption.edges[0].node.text || postTitle;
                             } else if (node.caption) {
                                 postTitle = typeof node.caption === 'string' ? node.caption : (node.caption.text || postTitle);
                             } else if (node.title) {
                                 postTitle = node.title;
+                            } else if (node.text) {
+                                postTitle = node.text;
                             }
 
-                            // 2. 精确提取作者
+                            // 2. 提取作者
                             const user = node.owner || node.user || node.author || {};
-                            postChannel = '@' + (user.username || 'instagrammer');
+                            if (user.username || user.full_name) {
+                                postChannel = '@' + (user.username || user.full_name);
+                            }
                             
-                            // 3. 精确提取最高清封面图
+                            // 3. 提取高清封面图
                             if (node.display_url) {
                                 postThumb = node.display_url;
                             } else if (node.thumbnail_src) {
                                 postThumb = node.thumbnail_src;
+                            } else if (node.image_versions2 && node.image_versions2.candidates && node.image_versions2.candidates.length > 0) {
+                                postThumb = node.image_versions2.candidates[0].url;
                             } else if (node.display_resources && node.display_resources.length > 0) {
                                 postThumb = node.display_resources[node.display_resources.length - 1].src || node.display_resources[0].src;
                             } else if (node.thumbnail_url) {
@@ -774,6 +830,10 @@ def generate_index_template():
                         console.warn("媒体元数据接口异常:", err);
                     }
                     
+                    if (!postThumb) {
+                        postThumb = getRandomAestheticSVG(postTitle);
+                    }
+
                     if (typeof postTitle === 'string') {
                         postTitle = postTitle.replace(/[\r\n]+/g, ' ').trim();
                         if (postTitle.length > 40) {
@@ -783,40 +843,70 @@ def generate_index_template():
 
                     loadingBar.style.width = '55%';
 
-                    // ================= 步骤 2：获取热门评论列表 =================
-                    const cRes = await fetch(`https://${rapidHost}/get_post_comments.php?media_code=${shortcode}&sort_order=popular`, {
-                        headers: { 'x-rapidapi-host': rapidHost, 'x-rapidapi-key': rapidKey }
-                    });
-                    if (!cRes.ok) throw new Error(`RapidAPI 获取评论失败 (状态码: ${cRes.status})`);
-                    const cData = await cRes.json();
-                    
-                    let rawComments = [];
-                    if (Array.isArray(cData)) rawComments = cData;
-                    else if (cData.comments && Array.isArray(cData.comments)) rawComments = cData.comments;
-                    else if (cData.data && Array.isArray(cData.data)) rawComments = cData.data;
-                    else if (cData.data && cData.data.comments) rawComments = cData.data.comments;
-                    else if (cData.data && cData.data.items) rawComments = cData.data.items;
-                    else if (cData.items && Array.isArray(cData.items)) rawComments = cData.items;
-
+                    // ================= 步骤 2：全路径深度解包热门评论 =================
                     let comments = [];
-                    for (let c of rawComments) {
-                        const cNode = c.node || c;
-                        const text = cNode.text || cNode.content || '';
+                    try {
+                        const cRes = await fetch(`https://${rapidHost}/get_post_comments.php?media_code=${shortcode}&sort_order=popular`, {
+                            headers: { 'x-rapidapi-host': rapidHost, 'x-rapidapi-key': rapidKey }
+                        });
                         
-                        // 过滤纯表情与纯标点符号
-                        if (text && /[\p{L}\p{N}]/u.test(text) && !text.includes('http')) {
-                            const user = cNode.user || cNode.owner || cNode.author || {};
-                            const authorName = user.username || "ins_user";
-                            const avatar = user.profile_pic_url || (user.hd_profile_pic_url_info && user.hd_profile_pic_url_info.url) || "https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png";
-                            const likes = parseInt(cNode.comment_like_count || cNode.like_count || (cNode.edge_liked_by && cNode.edge_liked_by.count) || 0);
-
-                            comments.push({
-                                author: authorName,
-                                avatar: avatar,
-                                text: text.replace(/\b[A-Z]{2,}\b/g, match => match.toLowerCase()),
-                                likes: likes
-                            });
+                        let rawComments = [];
+                        if (cRes.ok) {
+                            const cData = await cRes.json();
+                            if (Array.isArray(cData)) {
+                                rawComments = cData;
+                            } else if (cData) {
+                                const searchPaths = [
+                                    cData.comments,
+                                    cData.data?.comments,
+                                    cData.data?.items,
+                                    cData.items,
+                                    cData.data?.edges,
+                                    cData.edges,
+                                    cData.data?.xdt_shortcode_media?.edge_media_to_parent_comment?.edges,
+                                    cData.data?.shortcode_media?.edge_media_to_parent_comment?.edges,
+                                    cData.edge_media_to_parent_comment?.edges,
+                                    Array.isArray(cData.data) ? cData.data : null
+                                ];
+                                for (const p of searchPaths) {
+                                    if (p && Array.isArray(p) && p.length > 0) {
+                                        rawComments = p;
+                                        break;
+                                    }
+                                }
+                            }
                         }
+
+                        // 如果评论接口为空，从主帖数据兜底提取
+                        if (rawComments.length === 0 && postNode) {
+                            if (postNode.edge_media_to_parent_comment?.edges && Array.isArray(postNode.edge_media_to_parent_comment.edges)) {
+                                rawComments = postNode.edge_media_to_parent_comment.edges;
+                            } else if (postNode.comments && Array.isArray(postNode.comments)) {
+                                rawComments = postNode.comments;
+                            }
+                        }
+
+                        for (let c of rawComments) {
+                            const cNode = c.node || c;
+                            const text = cNode.text || cNode.content || (cNode.caption && cNode.caption.text) || cNode.comment || cNode.message || '';
+                            
+                            // 过滤纯表情与纯标点符号
+                            if (text && /[\p{L}\p{N}]/u.test(text) && !text.includes('http')) {
+                                const user = cNode.user || cNode.owner || cNode.author || {};
+                                const authorName = user.username || user.name || "ins_user";
+                                const avatar = user.profile_pic_url || (user.hd_profile_pic_url_info && user.hd_profile_pic_url_info.url) || "https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png";
+                                const likes = parseInt(cNode.comment_like_count || cNode.like_count || (cNode.edge_liked_by && cNode.edge_liked_by.count) || 0);
+
+                                comments.push({
+                                    author: authorName,
+                                    avatar: avatar,
+                                    text: text.replace(/\b[A-Z]{2,}\b/g, match => match.toLowerCase()),
+                                    likes: likes
+                                });
+                            }
+                        }
+                    } catch(err) {
+                        console.warn("评论获取异常:", err);
                     }
 
                     comments.sort((a, b) => b.likes - a.likes);
@@ -909,6 +999,7 @@ def generate_index_template():
             };
             
             const pageDataStr = JSON.stringify(pageData).replace(/</g, '\\u003c');
+            const fallbackSvg = getRandomAestheticSVG(pageData.post.title);
 
             function escapeHTML(str) {
                 if (typeof str !== 'string') return '';
@@ -919,7 +1010,7 @@ def generate_index_template():
             pageData.comments.forEach(c => {
                 comments_html += `
                 <div class="chat-message">
-                    <img src="${escapeHTML(c.avatar)}" class="avatar" alt="avatar" loading="lazy" referrerpolicy="no-referrer" onerror="this.src='https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png';">
+                    <img src="${escapeHTML(c.avatar)}" class="avatar" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.src='https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png';">
                     <div class="message-content">
                         <div class="message-header">
                             <span class="author">${escapeHTML(c.author)}</span>
@@ -953,7 +1044,7 @@ def generate_index_template():
         .sync-status { padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; display: none; color: #fff; background: #2ea44f; position: absolute; right: 15px; }
         
         .post-card { background: var(--card); border-radius: 18px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.05); margin: 15px; }
-        .post-thumb { width: 100%; max-height: 400px; min-height: 250px; display: block; object-fit: contain; background: var(--ins-btn); }
+        .post-thumb { width: 100%; height: 260px; display: block; object-fit: cover; background: var(--ins-btn); }
         .post-info { padding: 15px; }
         .p-channel { font-size: 0.85rem; color: var(--accent); font-weight: 700; margin-bottom: 6px; display: block; }
         .p-title { font-size: 1.05rem; font-weight: 600; margin: 0 0 12px 0; line-height: 1.4; }
@@ -992,7 +1083,15 @@ def generate_index_template():
     <div class="container">
         <h2 style="text-align: center; margin-bottom: 20px; color: #333;">📅 ${pageData.year}-${String(pageData.month).padStart(2,'0')}-${String(pageData.day).padStart(2,'0')}</h2>
         <div class="post-card">
-            <a href="${escapeHTML(pageData.post.url)}" target="_blank"><img src="${escapeHTML(pageData.post.thumb)}" class="post-thumb" style="min-height: 250px; background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); font-size: 0;" alt="Thumbnail" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://picsum.photos/seed/' + Math.random().toString(36).substr(2, 6) + '/800/600'; this.title='原图已失效，已自动替换为随机美化占位图';"></a>
+            <a href="${escapeHTML(pageData.post.url)}" target="_blank" style="display:block; overflow:hidden;">
+                <img src="${escapeHTML(pageData.post.thumb)}"
+                     class="post-thumb"
+                     alt=""
+                     referrerpolicy="no-referrer"
+                     data-raw-src="${escapeHTML(pageData.post.thumb)}"
+                     data-fallback="${fallbackSvg}"
+                     onerror="if(!this.dataset.triedProxy && this.dataset.rawSrc && !this.dataset.rawSrc.startsWith('data:')){ this.dataset.triedProxy='1'; this.src='https://images.weserv.nl/?url=' + encodeURIComponent(this.dataset.rawSrc) + '&w=800'; } else { this.onerror=null; this.src=this.dataset.fallback; }">
+            </a>
             <div class="post-info">
                 <span class="p-channel">${escapeHTML(pageData.post.channel)}</span>
                 <h1 class="p-title">${escapeHTML(pageData.post.title)}</h1>
@@ -1021,7 +1120,7 @@ def generate_index_template():
     os.makedirs(BASE_DIR, exist_ok=True)
     with open(os.path.join(BASE_DIR, "index.html"), "w", encoding="utf-8") as f:
         f.write(html_template)
-    print("✅ 精确匹配版生成完毕！请提交 docs/index.html 到 GitHub。")
+    print("✅ 终极修复版已生成！请将 docs/index.html 提交至 GitHub 仓库并刷新日历页面测试。")
 
 if __name__ == "__main__":
     generate_index_template()
