@@ -232,23 +232,6 @@ function escapeHTML(str) {
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
 }
 
-function getRandomAestheticSVG(title) {
-    const palettes = [
-        ['#f09433', '#e6683c', '#dc2743', '#cc2366', '#bc1888'],
-        ['#833ab4', '#fd1d1d', '#fcb045'],
-        ['#4158D0', '#C850C0', '#FFCC70'],
-        ['#0093E9', '#80D0C7'],
-        ['#FA8BFF', '#2BD2FF', '#2BFF88'],
-        ['#FBAB7E', '#F7CE68'],
-        ['#667eea', '#764ba2']
-    ];
-    const g = palettes[Math.floor(Math.random() * palettes.length)];
-    const stops = g.map((c, i) => `<stop offset="${Math.round(i/(g.length-1)*100)}%" stop-color="${c}"/>`).join('');
-    const safeTitle = (title || 'Instagram Post').replace(/["<>&]/g, '').trim().substring(0, 30);
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="100%" height="100%"><defs><linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">${stops}</linearGradient><radialGradient id="r" cx="50%" cy="50%" r="60%"><stop offset="0%" stop-color="#fff" stop-opacity="0.25"/><stop offset="100%" stop-color="#fff" stop-opacity="0"/></radialGradient></defs><rect width="100%" height="100%" fill="url(#bg)"/><circle cx="400" cy="225" r="300" fill="url(#r)"/><g transform="translate(365, 140) scale(1.3)" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="52" height="52" rx="14"/><circle cx="28" cy="28" r="12"/><circle cx="43" cy="13" r="3" fill="#fff"/></g><text x="50%" y="280" fill="#fff" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="24" font-weight="bold" text-anchor="middle" letter-spacing="1">INSTAGRAM ARCHIVE</text><text x="50%" y="318" fill="rgba(255,255,255,0.85)" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="16" text-anchor="middle">${safeTitle}</text></svg>`;
-    return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
-}
-
 function reconstructSelfHTML() {
     const dataTag = document.getElementById('page-data');
     if (!dataTag) throw new Error("Missing state data!");
@@ -265,13 +248,12 @@ function reconstructSelfHTML() {
     const engineText = document.getElementById('matrix-engine').textContent;
     const styleText = document.querySelector('style').textContent;
     const titleText = document.title;
-    const fallbackSvg = getRandomAestheticSVG(pageData.post.title);
 
     let comments_html = "";
     pageData.comments.forEach(c => {
         comments_html += `
         <div class="chat-message">
-            <img src="${escapeHTML(c.avatar)}" class="avatar" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.src='https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png';">
+            <img src="${escapeHTML(c.avatar)}" class="avatar" alt="avatar" loading="lazy">
             <div class="message-content">
                 <div class="message-header">
                     <span class="author">${escapeHTML(c.author)}</span>
@@ -305,15 +287,7 @@ function reconstructSelfHTML() {
     <div class="container">
         <h2 style="text-align: center; margin-bottom: 25px; color: #333;">📅 ${pageData.year}-${String(pageData.month).padStart(2,'0')}-${String(pageData.day).padStart(2,'0')}</h2>
         <div class="post-card">
-            <a href="${escapeHTML(pageData.post.url)}" target="_blank" style="display:block; overflow:hidden;">
-                <img src="${escapeHTML(pageData.post.thumb || fallbackSvg)}"
-                     class="post-thumb"
-                     alt=""
-                     referrerpolicy="no-referrer"
-                     data-raw-src="${escapeHTML(pageData.post.thumb)}"
-                     data-fallback="${fallbackSvg}"
-                     onerror="if(!this.dataset.triedProxy && this.dataset.rawSrc && !this.dataset.rawSrc.startsWith('data:')){ this.dataset.triedProxy='1'; this.src='https://images.weserv.nl/?url=' + encodeURIComponent(this.dataset.rawSrc) + '&w=800'; } else { this.onerror=null; this.src=this.dataset.fallback; }">
-            </a>
+            <a href="${escapeHTML(pageData.post.url)}" target="_blank"><img src="${escapeHTML(pageData.post.thumb)}" class="post-thumb" alt="Thumbnail"></a>
             <div class="post-info">
                 <span class="p-channel">${escapeHTML(pageData.post.channel)}</span>
                 <h1 class="p-title">${escapeHTML(pageData.post.title)}</h1>
@@ -555,23 +529,6 @@ def generate_index_template():
         const archiveData = /*DATA_START*/REPLACEME_JSON_DATA/*DATA_END*/;
         const today = new Date();
         const AppState = { year: today.getFullYear(), month: today.getMonth() + 1, day: today.getDate(), deleteMode: false };
-
-        function getRandomAestheticSVG(title) {
-            const palettes = [
-                ['#f09433', '#e6683c', '#dc2743', '#cc2366', '#bc1888'],
-                ['#833ab4', '#fd1d1d', '#fcb045'],
-                ['#4158D0', '#C850C0', '#FFCC70'],
-                ['#0093E9', '#80D0C7'],
-                ['#FA8BFF', '#2BD2FF', '#2BFF88'],
-                ['#FBAB7E', '#F7CE68'],
-                ['#667eea', '#764ba2']
-            ];
-            const g = palettes[Math.floor(Math.random() * palettes.length)];
-            const stops = g.map((c, i) => `<stop offset="${Math.round(i/(g.length-1)*100)}%" stop-color="${c}"/>`).join('');
-            const safeTitle = (title || 'Instagram Post').replace(/["<>&]/g, '').trim().substring(0, 30);
-            const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="100%" height="100%"><defs><linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">${stops}</linearGradient><radialGradient id="r" cx="50%" cy="50%" r="60%"><stop offset="0%" stop-color="#fff" stop-opacity="0.25"/><stop offset="100%" stop-color="#fff" stop-opacity="0"/></radialGradient></defs><rect width="100%" height="100%" fill="url(#bg)"/><circle cx="400" cy="225" r="300" fill="url(#r)"/><g transform="translate(365, 140) scale(1.3)" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="52" height="52" rx="14"/><circle cx="28" cy="28" r="12"/><circle cx="43" cy="13" r="3" fill="#fff"/></g><text x="50%" y="280" fill="#fff" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="24" font-weight="bold" text-anchor="middle" letter-spacing="1">INSTAGRAM ARCHIVE</text><text x="50%" y="318" fill="rgba(255,255,255,0.85)" font-family="-apple-system,BlinkMacSystemFont,sans-serif" font-size="16" text-anchor="middle">${safeTitle}</text></svg>`;
-            return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
-        }
 
         function popToast(msg, duration = 1200) {
             const overlay = document.getElementById('toastOverlay');
@@ -823,9 +780,6 @@ def generate_index_template():
                     }
 
                     loadingBar.style.width = '55%';
-                    
-                    // 【新增核心修复】强制等待 1.5 秒，完美避开 RapidAPI 免费套餐的 "429 Too Many Requests" 限制
-                    await new Promise(resolve => setTimeout(resolve, 1500));
 
                     // ================= 步骤 2：获取热门评论列表 =================
                     const cRes = await fetch(`https://${rapidHost}/get_post_comments.php?media_code=${shortcode}&sort_order=popular`, {
@@ -953,7 +907,6 @@ def generate_index_template():
             };
             
             const pageDataStr = JSON.stringify(pageData).replace(/</g, '\\u003c');
-            const fallbackSvg = getRandomAestheticSVG(pageData.post.title);
 
             function escapeHTML(str) {
                 if (typeof str !== 'string') return '';
@@ -964,7 +917,7 @@ def generate_index_template():
             pageData.comments.forEach(c => {
                 comments_html += `
                 <div class="chat-message">
-                    <img src="${escapeHTML(c.avatar)}" class="avatar" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.src='https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png';">
+                    <img src="${escapeHTML(c.avatar)}" class="avatar" alt="avatar" loading="lazy">
                     <div class="message-content">
                         <div class="message-header">
                             <span class="author">${escapeHTML(c.author)}</span>
@@ -997,7 +950,7 @@ def generate_index_template():
         .sync-status { padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; display: none; color: #fff; background: #2ea44f; position: absolute; right: 15px; }
         
         .post-card { background: var(--card); border-radius: 18px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.05); margin: 15px; }
-        .post-thumb { width: 100%; max-height: 400px; min-height: 250px; display: block; object-fit: contain; background: var(--ins-btn); font-size: 0; }
+        .post-thumb { width: 100%; max-height: 400px; display: block; object-fit: contain; background: #000; }
         .post-info { padding: 15px; }
         .p-channel { font-size: 0.85rem; color: var(--accent); font-weight: 700; margin-bottom: 6px; display: block; }
         .p-title { font-size: 1.05rem; font-weight: 600; margin: 0 0 12px 0; line-height: 1.4; }
@@ -1036,15 +989,7 @@ def generate_index_template():
     <div class="container">
         <h2 style="text-align: center; margin-bottom: 20px; color: #333;">📅 ${pageData.year}-${String(pageData.month).padStart(2,'0')}-${String(pageData.day).padStart(2,'0')}</h2>
         <div class="post-card">
-            <a href="${escapeHTML(pageData.post.url)}" target="_blank" style="display:block; overflow:hidden;">
-                <img src="${escapeHTML(pageData.post.thumb || fallbackSvg)}"
-                     class="post-thumb"
-                     alt=""
-                     referrerpolicy="no-referrer"
-                     data-raw-src="${escapeHTML(pageData.post.thumb)}"
-                     data-fallback="${fallbackSvg}"
-                     onerror="if(!this.dataset.triedProxy && this.dataset.rawSrc && !this.dataset.rawSrc.startsWith('data:')){ this.dataset.triedProxy='1'; this.src='https://images.weserv.nl/?url=' + encodeURIComponent(this.dataset.rawSrc) + '&w=800'; } else { this.onerror=null; this.src=this.dataset.fallback; }">
-            </a>
+            <a href="${escapeHTML(pageData.post.url)}" target="_blank"><img src="${escapeHTML(pageData.post.thumb)}" class="post-thumb" alt="Thumbnail"></a>
             <div class="post-info">
                 <span class="p-channel">${escapeHTML(pageData.post.channel)}</span>
                 <h1 class="p-title">${escapeHTML(pageData.post.title)}</h1>
@@ -1073,7 +1018,7 @@ def generate_index_template():
     os.makedirs(BASE_DIR, exist_ok=True)
     with open(os.path.join(BASE_DIR, "index.html"), "w", encoding="utf-8") as f:
         f.write(html_template)
-    print("✅ 纯净修复版生成完毕！请提交 docs/index.html 到 GitHub。")
+    print("✅ `docs/index.html` 已成功更新为稳定版新 API 接口！")
 
 if __name__ == "__main__":
     generate_index_template()
