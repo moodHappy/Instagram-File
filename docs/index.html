@@ -144,7 +144,7 @@
     </div>
 
     <script>
-        const archiveData = /*DATA_START*/{"2026":{"9":{}}}/*DATA_END*/;
+        const archiveData = /*DATA_START*/{"2026": {"9": {"13": [{"time": "12:53", "path": "2026/9/2026_9_13_1253_ins.html", "title": "\ud83d\udcf8 Instagram \u8d34\u6587"}, {"time": "12:46", "path": "2026/9/2026_9_13_1246_ins.html", "title": "\ud83d\udcf8 Instagram \u8d34\u6587"}]}}}/*DATA_END*/;
         const today = new Date();
         const AppState = { year: today.getFullYear(), month: today.getMonth() + 1, day: today.getDate(), deleteMode: false };
 
@@ -415,6 +415,9 @@
                     }
 
                     loadingBar.style.width = '55%';
+                    
+                    // 【新增核心修复】强制等待 1.5 秒，完美避开 RapidAPI 免费套餐的 "429 Too Many Requests" 限制
+                    await new Promise(resolve => setTimeout(resolve, 1500));
 
                     // ================= 步骤 2：获取热门评论列表 =================
                     const cRes = await fetch(`https://${rapidHost}/get_post_comments.php?media_code=${shortcode}&sort_order=popular`, {
