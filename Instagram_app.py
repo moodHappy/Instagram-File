@@ -253,7 +253,7 @@ function reconstructSelfHTML() {
     pageData.comments.forEach(c => {
         comments_html += `
         <div class="chat-message">
-            <img src="${escapeHTML(c.avatar)}" class="avatar" alt="avatar" loading="lazy" referrerpolicy="no-referrer" onerror="this.src='https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png';">
+            <img src="${escapeHTML(c.avatar)}" class="avatar" alt="avatar" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png';">
             <div class="message-content">
                 <div class="message-header">
                     <span class="author">${escapeHTML(c.author)}</span>
@@ -702,6 +702,14 @@ def generate_index_template():
             return null;
         }
 
+        // ================= 核心：防盗链与跨域免疫图片转接引擎 =================
+        function toSafeImgUrl(url) {
+            if (!url || typeof url !== 'string') return "https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png";
+            if (url.includes("static.cdninstagram.com")) return url;
+            // 经过 Cloudflare 托管的高速安全图片缓存，彻底绕过 403 阻断
+            return `https://wsrv.nl/?url=${encodeURIComponent(url)}&default=https%3A%2F%2Fstatic.cdninstagram.com%2Frsrc.php%2Fv3%2FyI%2Fr%2FVsNE-OHk_8a.png`;
+        }
+
         document.getElementById('insUrlInput').addEventListener('keypress', async function (e) {
             if (e.key === 'Enter') {
                 const rawUrl = this.value.trim();
@@ -746,7 +754,7 @@ def generate_index_template():
                             const item = root.items ? root.items[0] : root;
                             const node = (item && item.node) ? item.node : item;
 
-                            // 1. 精确提取 Caption / 描述
+                            // 1. 提取 Caption / 描述
                             if (node.edge_media_to_caption && node.edge_media_to_caption.edges && node.edge_media_to_caption.edges.length > 0) {
                                 postTitle = node.edge_media_to_caption.edges[0].node.text || postTitle;
                             } else if (node.caption) {
@@ -755,19 +763,24 @@ def generate_index_template():
                                 postTitle = node.title;
                             }
 
-                            // 2. 精确提取作者
+                            // 2. 提取作者
                             const user = node.owner || node.user || node.author || {};
                             postChannel = '@' + (user.username || 'instagrammer');
                             
-                            // 3. 精确提取最高清封面图
+                            // 3. 提取最高清封面图
+                            let rawThumb = "";
                             if (node.display_url) {
-                                postThumb = node.display_url;
+                                rawThumb = node.display_url;
                             } else if (node.thumbnail_src) {
-                                postThumb = node.thumbnail_src;
+                                rawThumb = node.thumbnail_src;
                             } else if (node.display_resources && node.display_resources.length > 0) {
-                                postThumb = node.display_resources[node.display_resources.length - 1].src || node.display_resources[0].src;
+                                rawThumb = node.display_resources[node.display_resources.length - 1].src || node.display_resources[0].src;
                             } else if (node.thumbnail_url) {
-                                postThumb = node.thumbnail_url;
+                                rawThumb = node.thumbnail_url;
+                            }
+
+                            if (rawThumb) {
+                                postThumb = toSafeImgUrl(rawThumb);
                             }
                         }
                     } catch(err) {
@@ -807,7 +820,8 @@ def generate_index_template():
                         if (text && /[\p{L}\p{N}]/u.test(text) && !text.includes('http')) {
                             const user = cNode.user || cNode.owner || cNode.author || {};
                             const authorName = user.username || "ins_user";
-                            const avatar = user.profile_pic_url || (user.hd_profile_pic_url_info && user.hd_profile_pic_url_info.url) || "https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png";
+                            const rawAvatar = user.profile_pic_url || (user.hd_profile_pic_url_info && user.hd_profile_pic_url_info.url) || "";
+                            const avatar = toSafeImgUrl(rawAvatar);
                             const likes = parseInt(cNode.comment_like_count || cNode.like_count || (cNode.edge_liked_by && cNode.edge_liked_by.count) || 0);
 
                             comments.push({
@@ -919,7 +933,7 @@ def generate_index_template():
             pageData.comments.forEach(c => {
                 comments_html += `
                 <div class="chat-message">
-                    <img src="${escapeHTML(c.avatar)}" class="avatar" alt="avatar" loading="lazy" referrerpolicy="no-referrer" onerror="this.src='https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png';">
+                    <img src="${escapeHTML(c.avatar)}" class="avatar" alt="avatar" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png';">
                     <div class="message-content">
                         <div class="message-header">
                             <span class="author">${escapeHTML(c.author)}</span>
@@ -1021,7 +1035,7 @@ def generate_index_template():
     os.makedirs(BASE_DIR, exist_ok=True)
     with open(os.path.join(BASE_DIR, "index.html"), "w", encoding="utf-8") as f:
         f.write(html_template)
-    print("✅ 精确匹配版生成完毕！请提交 docs/index.html 到 GitHub。")
+    print("✅ 已彻底加入防盗链免疫代理！请提交 docs/index.html 到 GitHub。")
 
 if __name__ == "__main__":
     generate_index_template()
