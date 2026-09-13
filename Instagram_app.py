@@ -137,6 +137,25 @@ async function executeAIPipeline(text) {
     }
 }
 
+// 优雅防灾处理函数
+function triggerThumbFallback(img) {
+    const parent = img.closest('.thumb-container');
+    if (!parent) return;
+    const fallbackBox = parent.querySelector('.thumb-fallback');
+    if (fallbackBox) {
+        img.style.display = 'none';
+        fallbackBox.style.display = 'flex';
+    }
+}
+
+function triggerAvatarFallback(img, author) {
+    const letter = (author || 'U').replace('@','').charAt(0).toUpperCase();
+    const div = document.createElement('div');
+    div.className = 'avatar avatar-fallback';
+    div.innerText = letter;
+    img.replaceWith(div);
+}
+
 function initAnnotations() {
     document.querySelectorAll('.para-wrap').forEach(wrap => {
         const view = wrap.querySelector('.anno-view');
@@ -253,7 +272,7 @@ function reconstructSelfHTML() {
     pageData.comments.forEach(c => {
         comments_html += `
         <div class="chat-message">
-            <img src="${escapeHTML(c.avatar)}" class="avatar" alt="avatar" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png';">
+            <img src="${escapeHTML(c.avatar)}" class="avatar" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="triggerAvatarFallback(this, '${escapeHTML(c.author)}')">
             <div class="message-content">
                 <div class="message-header">
                     <span class="author">${escapeHTML(c.author)}</span>
@@ -288,7 +307,15 @@ function reconstructSelfHTML() {
     <div class="container">
         <h2 style="text-align: center; margin-bottom: 25px; color: #333;">📅 ${pageData.year}-${String(pageData.month).padStart(2,'0')}-${String(pageData.day).padStart(2,'0')}</h2>
         <div class="post-card">
-            <a href="${escapeHTML(pageData.post.url)}" target="_blank"><img src="${escapeHTML(pageData.post.thumb)}" class="post-thumb" alt="Thumbnail" referrerpolicy="no-referrer"></a>
+            <div class="thumb-container">
+                <img src="${escapeHTML(pageData.post.thumb)}" class="post-thumb" alt="" referrerpolicy="no-referrer" onerror="triggerThumbFallback(this)">
+                <div class="thumb-fallback" style="display: none;">
+                    <div class="fallback-badge">📸 贴文快照</div>
+                    <div class="fallback-title">${escapeHTML(pageData.post.title)}</div>
+                    <div class="fallback-channel">${escapeHTML(pageData.post.channel)}</div>
+                    <a href="${escapeHTML(pageData.post.url)}" target="_blank" class="fallback-btn">▶ 前往 Instagram 浏览</a>
+                </div>
+            </div>
             <div class="post-info">
                 <span class="p-channel">${escapeHTML(pageData.post.channel)}</span>
                 <h1 class="p-title">${escapeHTML(pageData.post.title)}</h1>
@@ -702,12 +729,9 @@ def generate_index_template():
             return null;
         }
 
-        // ================= 核心：防盗链与跨域免疫图片转接引擎 =================
-        function toSafeImgUrl(url) {
-            if (!url || typeof url !== 'string') return "https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png";
-            if (url.includes("static.cdninstagram.com")) return url;
-            // 经过 Cloudflare 托管的高速安全图片缓存，彻底绕过 403 阻断
-            return `https://wsrv.nl/?url=${encodeURIComponent(url)}&default=https%3A%2F%2Fstatic.cdninstagram.com%2Frsrc.php%2Fv3%2FyI%2Fr%2FVsNE-OHk_8a.png`;
+        function buildSafeProxyUrl(url) {
+            if (!url || typeof url !== 'string') return "";
+            return `https://wsrv.nl/?url=${encodeURIComponent(url)}&output=webp&q=85`;
         }
 
         document.getElementById('insUrlInput').addEventListener('keypress', async function (e) {
@@ -740,7 +764,7 @@ def generate_index_template():
                 try {
                     let postTitle = `Instagram Post (${shortcode})`;
                     let postChannel = "@instagram_user";
-                    let postThumb = "https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png";
+                    let postThumb = "";
                     let postUrl = `https://www.instagram.com/p/${shortcode}/`;
 
                     // ================= 步骤 1：精确匹配媒体数据 =================
@@ -780,11 +804,11 @@ def generate_index_template():
                             }
 
                             if (rawThumb) {
-                                postThumb = toSafeImgUrl(rawThumb);
+                                postThumb = buildSafeProxyUrl(rawThumb);
                             }
                         }
                     } catch(err) {
-                        console.warn("媒体元数据接口异常:", err);
+                        console.warn("媒体元数据获取跳过:", err);
                     }
                     
                     if (typeof postTitle === 'string') {
@@ -816,12 +840,11 @@ def generate_index_template():
                         const cNode = c.node || c;
                         const text = cNode.text || cNode.content || '';
                         
-                        // 过滤纯表情与纯标点符号
                         if (text && /[\p{L}\p{N}]/u.test(text) && !text.includes('http')) {
                             const user = cNode.user || cNode.owner || cNode.author || {};
                             const authorName = user.username || "ins_user";
                             const rawAvatar = user.profile_pic_url || (user.hd_profile_pic_url_info && user.hd_profile_pic_url_info.url) || "";
-                            const avatar = toSafeImgUrl(rawAvatar);
+                            const avatar = buildSafeProxyUrl(rawAvatar);
                             const likes = parseInt(cNode.comment_like_count || cNode.like_count || (cNode.edge_liked_by && cNode.edge_liked_by.count) || 0);
 
                             comments.push({
@@ -933,7 +956,7 @@ def generate_index_template():
             pageData.comments.forEach(c => {
                 comments_html += `
                 <div class="chat-message">
-                    <img src="${escapeHTML(c.avatar)}" class="avatar" alt="avatar" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png';">
+                    <img src="${escapeHTML(c.avatar)}" class="avatar" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="triggerAvatarFallback(this, '${escapeHTML(c.author)}')">
                     <div class="message-content">
                         <div class="message-header">
                             <span class="author">${escapeHTML(c.author)}</span>
@@ -949,6 +972,9 @@ def generate_index_template():
                     </div>
                 </div>`;
             });
+
+            const showImg = pageData.post.thumb ? 'display:block;' : 'display:none;';
+            const showFb = pageData.post.thumb ? 'display:none;' : 'display:flex;';
 
             return `<!DOCTYPE html>
 <html lang="en">
@@ -967,7 +993,18 @@ def generate_index_template():
         .sync-status { padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; display: none; color: #fff; background: #2ea44f; position: absolute; right: 15px; }
         
         .post-card { background: var(--card); border-radius: 18px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.05); margin: 15px; }
-        .post-thumb { width: 100%; max-height: 400px; display: block; object-fit: contain; background: #000; }
+        
+        /* 封面图容器与美化降级卡片 */
+        .thumb-container { width: 100%; min-height: 220px; background: #1a1a1a; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+        .post-thumb { width: 100%; max-height: 420px; object-fit: cover; display: block; }
+        
+        .thumb-fallback { width: 100%; min-height: 220px; box-sizing: border-box; padding: 35px 25px; background: linear-gradient(135deg, #405de6, #5851db, #833ab4, #c13584, #e1306c, #fd1d1d); color: white; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; }
+        .thumb-fallback::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.25), transparent 70%); pointer-events: none; }
+        .fallback-badge { background: rgba(255, 255, 255, 0.28); backdrop-filter: blur(8px); padding: 4px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 800; margin-bottom: 12px; letter-spacing: 0.5px; }
+        .fallback-title { font-size: 1.15rem; font-weight: 800; margin: 0 0 6px 0; line-height: 1.4; text-shadow: 0 2px 6px rgba(0,0,0,0.3); }
+        .fallback-channel { font-size: 0.85rem; opacity: 0.9; margin-bottom: 18px; font-weight: 600; }
+        .fallback-btn { background: #ffffff; color: #cc2366; font-weight: 800; font-size: 0.85rem; padding: 9px 20px; border-radius: 25px; text-decoration: none; box-shadow: 0 4px 14px rgba(0,0,0,0.25); }
+
         .post-info { padding: 15px; }
         .p-channel { font-size: 0.85rem; color: var(--accent); font-weight: 700; margin-bottom: 6px; display: block; }
         .p-title { font-size: 1.05rem; font-weight: 600; margin: 0 0 12px 0; line-height: 1.4; }
@@ -978,6 +1015,8 @@ def generate_index_template():
         .chat-container { padding: 0 15px; display: flex; flex-direction: column; gap: 15px; }
         .chat-message { display: flex; gap: 10px; align-items: flex-start; }
         .avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background: #ddd; flex-shrink: 0; }
+        .avatar-fallback { display: flex; align-items: center; justify-content: center; background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); color: #fff; font-weight: 800; font-size: 15px; text-transform: uppercase; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+
         .message-content { flex: 1; min-width: 0; }
         .message-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 4px; }
         .author { font-size: 0.85rem; color: var(--muted); font-weight: 600; }
@@ -1006,7 +1045,15 @@ def generate_index_template():
     <div class="container">
         <h2 style="text-align: center; margin-bottom: 20px; color: #333;">📅 ${pageData.year}-${String(pageData.month).padStart(2,'0')}-${String(pageData.day).padStart(2,'0')}</h2>
         <div class="post-card">
-            <a href="${escapeHTML(pageData.post.url)}" target="_blank"><img src="${escapeHTML(pageData.post.thumb)}" class="post-thumb" alt="Thumbnail" referrerpolicy="no-referrer"></a>
+            <div class="thumb-container">
+                <img src="${escapeHTML(pageData.post.thumb)}" class="post-thumb" alt="" referrerpolicy="no-referrer" style="${showImg}" onerror="triggerThumbFallback(this)">
+                <div class="thumb-fallback" style="${showFb}">
+                    <div class="fallback-badge">📸 贴文快照</div>
+                    <div class="fallback-title">${escapeHTML(pageData.post.title)}</div>
+                    <div class="fallback-channel">${escapeHTML(pageData.post.channel)}</div>
+                    <a href="${escapeHTML(pageData.post.url)}" target="_blank" class="fallback-btn">▶ 前往 Instagram 浏览</a>
+                </div>
+            </div>
             <div class="post-info">
                 <span class="p-channel">${escapeHTML(pageData.post.channel)}</span>
                 <h1 class="p-title">${escapeHTML(pageData.post.title)}</h1>
@@ -1035,7 +1082,7 @@ def generate_index_template():
     os.makedirs(BASE_DIR, exist_ok=True)
     with open(os.path.join(BASE_DIR, "index.html"), "w", encoding="utf-8") as f:
         f.write(html_template)
-    print("✅ 已彻底加入防盗链免疫代理！请提交 docs/index.html 到 GitHub。")
+    print("✅ 已彻底加入双重防灾与极光卡片优雅降级！请提交 docs/index.html 到 GitHub。")
 
 if __name__ == "__main__":
     generate_index_template()
