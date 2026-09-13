@@ -253,7 +253,7 @@ function reconstructSelfHTML() {
     pageData.comments.forEach(c => {
         comments_html += `
         <div class="chat-message">
-            <img src="${escapeHTML(c.avatar)}" class="avatar" alt="avatar" loading="lazy">
+            <img src="${escapeHTML(c.avatar)}" class="avatar" alt="avatar" loading="lazy" referrerpolicy="no-referrer" onerror="this.src='https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png';">
             <div class="message-content">
                 <div class="message-header">
                     <span class="author">${escapeHTML(c.author)}</span>
@@ -275,6 +275,7 @@ function reconstructSelfHTML() {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="referrer" content="no-referrer">
     <title>${escapeHTML(titleText)}</title>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"><\/script>
     <style>${styleText}</style>
@@ -287,7 +288,7 @@ function reconstructSelfHTML() {
     <div class="container">
         <h2 style="text-align: center; margin-bottom: 25px; color: #333;">📅 ${pageData.year}-${String(pageData.month).padStart(2,'0')}-${String(pageData.day).padStart(2,'0')}</h2>
         <div class="post-card">
-            <a href="${escapeHTML(pageData.post.url)}" target="_blank"><img src="${escapeHTML(pageData.post.thumb)}" class="post-thumb" alt="Thumbnail"></a>
+            <a href="${escapeHTML(pageData.post.url)}" target="_blank"><img src="${escapeHTML(pageData.post.thumb)}" class="post-thumb" alt="Thumbnail" referrerpolicy="no-referrer"></a>
             <div class="post-info">
                 <span class="p-channel">${escapeHTML(pageData.post.channel)}</span>
                 <h1 class="p-title">${escapeHTML(pageData.post.title)}</h1>
@@ -385,6 +386,7 @@ def generate_index_template():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="referrer" content="no-referrer">
     <title>Instagram 潮语精读日历</title>
     <style>
         :root { 
@@ -756,15 +758,22 @@ def generate_index_template():
                                 const user = node.user || node.owner || node.author || {};
                                 postChannel = '@' + (user.username || 'instagrammer');
                                 
-                                // 提取封面图 (多层级容错)
-                                if (node.thumbnail_url) {
-                                    postThumb = node.thumbnail_url;
-                                } else if (node.display_url) {
-                                    postThumb = node.display_url;
-                                } else if (node.thumbnail_src) {
-                                    postThumb = node.thumbnail_src;
-                                } else if (node.image_versions2 && node.image_versions2.candidates && node.image_versions2.candidates.length > 0) {
-                                    postThumb = node.image_versions2.candidates[0].url;
+                                // 提取高清封面图 (深层多重容错)
+                                let possibleThumbs = [];
+                                if (node.thumbnail_url) possibleThumbs.push(node.thumbnail_url);
+                                if (node.display_url) possibleThumbs.push(node.display_url);
+                                if (node.thumbnail_src) possibleThumbs.push(node.thumbnail_src);
+                                if (node.image_versions2 && node.image_versions2.candidates) {
+                                    node.image_versions2.candidates.forEach(c => { if(c.url) possibleThumbs.push(c.url); });
+                                }
+                                if (node.carousel_media && node.carousel_media.length > 0) {
+                                    const firstM = node.carousel_media[0];
+                                    if (firstM.image_versions2 && firstM.image_versions2.candidates) {
+                                        firstM.image_versions2.candidates.forEach(c => { if(c.url) possibleThumbs.push(c.url); });
+                                    }
+                                }
+                                if (possibleThumbs.length > 0) {
+                                    postThumb = possibleThumbs[0];
                                 }
                             }
                         }
@@ -917,7 +926,7 @@ def generate_index_template():
             pageData.comments.forEach(c => {
                 comments_html += `
                 <div class="chat-message">
-                    <img src="${escapeHTML(c.avatar)}" class="avatar" alt="avatar" loading="lazy">
+                    <img src="${escapeHTML(c.avatar)}" class="avatar" alt="avatar" loading="lazy" referrerpolicy="no-referrer" onerror="this.src='https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png';">
                     <div class="message-content">
                         <div class="message-header">
                             <span class="author">${escapeHTML(c.author)}</span>
@@ -939,6 +948,7 @@ def generate_index_template():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="referrer" content="no-referrer">
     <title>${escapeHTML(pageData.post.title)}</title>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"><` + `/script>
     <style>
@@ -989,7 +999,7 @@ def generate_index_template():
     <div class="container">
         <h2 style="text-align: center; margin-bottom: 20px; color: #333;">📅 ${pageData.year}-${String(pageData.month).padStart(2,'0')}-${String(pageData.day).padStart(2,'0')}</h2>
         <div class="post-card">
-            <a href="${escapeHTML(pageData.post.url)}" target="_blank"><img src="${escapeHTML(pageData.post.thumb)}" class="post-thumb" alt="Thumbnail"></a>
+            <a href="${escapeHTML(pageData.post.url)}" target="_blank"><img src="${escapeHTML(pageData.post.thumb)}" class="post-thumb" alt="Thumbnail" referrerpolicy="no-referrer"></a>
             <div class="post-info">
                 <span class="p-channel">${escapeHTML(pageData.post.channel)}</span>
                 <h1 class="p-title">${escapeHTML(pageData.post.title)}</h1>
@@ -1018,7 +1028,7 @@ def generate_index_template():
     os.makedirs(BASE_DIR, exist_ok=True)
     with open(os.path.join(BASE_DIR, "index.html"), "w", encoding="utf-8") as f:
         f.write(html_template)
-    print("✅ `docs/index.html` 已成功更新为稳定版新 API 接口！")
+    print("✅ 已成功修复防盗链破图问题！请提交 docs/index.html 到 GitHub。")
 
 if __name__ == "__main__":
     generate_index_template()
