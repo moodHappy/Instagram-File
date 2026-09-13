@@ -1,4 +1,3 @@
-
 import os
 import json
 import base64
@@ -307,7 +306,7 @@ function reconstructSelfHTML() {
         <h2 style="text-align: center; margin-bottom: 25px; color: #333;">📅 ${pageData.year}-${String(pageData.month).padStart(2,'0')}-${String(pageData.day).padStart(2,'0')}</h2>
         <div class="post-card">
             <a href="${escapeHTML(pageData.post.url)}" target="_blank" style="display:block; overflow:hidden;">
-                <img src="${escapeHTML(pageData.post.thumb)}"
+                <img src="${escapeHTML(pageData.post.thumb || fallbackSvg)}"
                      class="post-thumb"
                      alt=""
                      referrerpolicy="no-referrer"
