@@ -823,6 +823,9 @@ def generate_index_template():
                     }
 
                     loadingBar.style.width = '55%';
+                    
+                    // 【新增核心修复】强制等待 1.5 秒，完美避开 RapidAPI 免费套餐的 "429 Too Many Requests" 限制
+                    await new Promise(resolve => setTimeout(resolve, 1500));
 
                     // ================= 步骤 2：获取热门评论列表 =================
                     const cRes = await fetch(`https://${rapidHost}/get_post_comments.php?media_code=${shortcode}&sort_order=popular`, {
