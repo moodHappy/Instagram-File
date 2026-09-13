@@ -145,7 +145,7 @@
     </div>
 
     <script>
-        const archiveData = /*DATA_START*/{"2026":{"9":{}}}/*DATA_END*/;
+        const archiveData = /*DATA_START*/{}/*DATA_END*/;
         const today = new Date();
         const AppState = { year: today.getFullYear(), month: today.getMonth() + 1, day: today.getDate(), deleteMode: false };
 
@@ -352,50 +352,43 @@
                     let postThumb = "https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png";
                     let postUrl = `https://www.instagram.com/p/${shortcode}/`;
 
-                    // ================= 步骤 1：获取媒体元数据与封面图 =================
+                    // ================= 步骤 1：精确匹配媒体数据 =================
                     try {
                         const pRes = await fetch(`https://${rapidHost}/get_media_data_v2.php?media_code=${shortcode}`, {
                             headers: { 'x-rapidapi-host': rapidHost, 'x-rapidapi-key': rapidKey }
                         });
                         if (pRes.ok) {
                             const pData = await pRes.json();
-                            const item = pData.items ? pData.items[0] : (pData.data || pData);
+                            const root = (pData.data && !pData.id) ? pData.data : pData;
+                            const item = root.items ? root.items[0] : root;
                             const node = (item && item.node) ? item.node : item;
-                            if (node) {
-                                // 提取 Caption / Title
-                                if (node.caption) {
-                                    postTitle = typeof node.caption === 'string' ? node.caption : (node.caption.text || postTitle);
-                                } else if (node.title) {
-                                    postTitle = node.title;
-                                } else if (node.text) {
-                                    postTitle = node.text;
-                                }
 
-                                // 提取作者 Username
-                                const user = node.user || node.owner || node.author || {};
-                                postChannel = '@' + (user.username || 'instagrammer');
-                                
-                                // 提取高清封面图 (深层多重容错)
-                                let possibleThumbs = [];
-                                if (node.thumbnail_url) possibleThumbs.push(node.thumbnail_url);
-                                if (node.display_url) possibleThumbs.push(node.display_url);
-                                if (node.thumbnail_src) possibleThumbs.push(node.thumbnail_src);
-                                if (node.image_versions2 && node.image_versions2.candidates) {
-                                    node.image_versions2.candidates.forEach(c => { if(c.url) possibleThumbs.push(c.url); });
-                                }
-                                if (node.carousel_media && node.carousel_media.length > 0) {
-                                    const firstM = node.carousel_media[0];
-                                    if (firstM.image_versions2 && firstM.image_versions2.candidates) {
-                                        firstM.image_versions2.candidates.forEach(c => { if(c.url) possibleThumbs.push(c.url); });
-                                    }
-                                }
-                                if (possibleThumbs.length > 0) {
-                                    postThumb = possibleThumbs[0];
-                                }
+                            // 1. 精确提取 Caption / 描述
+                            if (node.edge_media_to_caption && node.edge_media_to_caption.edges && node.edge_media_to_caption.edges.length > 0) {
+                                postTitle = node.edge_media_to_caption.edges[0].node.text || postTitle;
+                            } else if (node.caption) {
+                                postTitle = typeof node.caption === 'string' ? node.caption : (node.caption.text || postTitle);
+                            } else if (node.title) {
+                                postTitle = node.title;
+                            }
+
+                            // 2. 精确提取作者
+                            const user = node.owner || node.user || node.author || {};
+                            postChannel = '@' + (user.username || 'instagrammer');
+                            
+                            // 3. 精确提取最高清封面图
+                            if (node.display_url) {
+                                postThumb = node.display_url;
+                            } else if (node.thumbnail_src) {
+                                postThumb = node.thumbnail_src;
+                            } else if (node.display_resources && node.display_resources.length > 0) {
+                                postThumb = node.display_resources[node.display_resources.length - 1].src || node.display_resources[0].src;
+                            } else if (node.thumbnail_url) {
+                                postThumb = node.thumbnail_url;
                             }
                         }
                     } catch(err) {
-                        console.warn("媒体元数据接口受阻，继续尝试抓取评论:", err);
+                        console.warn("媒体元数据接口异常:", err);
                     }
                     
                     if (typeof postTitle === 'string') {
@@ -432,7 +425,7 @@
                             const user = cNode.user || cNode.owner || cNode.author || {};
                             const authorName = user.username || "ins_user";
                             const avatar = user.profile_pic_url || (user.hd_profile_pic_url_info && user.hd_profile_pic_url_info.url) || "https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png";
-                            const likes = parseInt(cNode.comment_like_count || cNode.like_count || 0);
+                            const likes = parseInt(cNode.comment_like_count || cNode.like_count || (cNode.edge_liked_by && cNode.edge_liked_by.count) || 0);
 
                             comments.push({
                                 author: authorName,
