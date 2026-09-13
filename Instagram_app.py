@@ -103,8 +103,6 @@ async function fetchGLM(text, apiKey, modelName) {
 
 async function executeAIPipeline(text) {
     const pref = localStorage.getItem('PREFERRED_AI') || 'groq';
-    
-    // 强制清理由于复制粘贴导致的不可见字符或中文空格
     const groqKey = (localStorage.getItem('GROQ_API_KEY') || '').replace(/[^\x20-\x7E]/g, '');
     const glmKey = (localStorage.getItem('GLM_API_KEY') || '').replace(/[^\x20-\x7E]/g, '');
     const customKey = (localStorage.getItem('CUSTOM_API_KEY') || '').replace(/[^\x20-\x7E]/g, '');
@@ -310,7 +308,6 @@ function reconstructSelfHTML() {
 }
 
 async function syncToGitHub() {
-    // 强制净化 Token，防止包含非法字符导致 Fetch Header 报错
     const token = (localStorage.getItem('GH_TOKEN') || '').replace(/[^\x20-\x7E]/g, '');
     const owner = (localStorage.getItem('GH_OWNER') || '').replace(/[^\x20-\x7E]/g, '');
     const repo = 'Instagram-File';
@@ -466,7 +463,7 @@ def generate_index_template():
             <p style="font-size:12px; color:#888; margin-top:-10px; margin-bottom:15px;">专属配置已隔离，不会与 Twitter/TikTok 产生覆盖。</p>
             
             <div class="form-group"><label>Instagram RapidAPI Key</label><input type="password" id="cfgRapidKey" placeholder="在此粘贴你的 RapidAPI Key"></div>
-            <div class="form-group"><label>Instagram RapidAPI Host</label><input type="text" id="cfgRapidHost" placeholder="instagram-scraper-ai1.p.rapidapi.com"></div>
+            <div class="form-group"><label>Instagram RapidAPI Host</label><input type="text" id="cfgRapidHost" placeholder="instagram-scraper-stable-api.p.rapidapi.com"></div>
             
             <div style="border-top:1px dashed #ddd; margin: 15px 0;"></div>
             <div class="form-group"><label>GitHub Personal Access Token</label><input type="password" id="cfgGhToken" placeholder="ghp_..."></div>
@@ -541,8 +538,8 @@ def generate_index_template():
         }
 
         function openConfigModal() {
-            document.getElementById('cfgRapidKey').value = localStorage.getItem('INS_RAPIDAPI_KEY') || '';
-            document.getElementById('cfgRapidHost').value = localStorage.getItem('INS_RAPIDAPI_HOST') || 'instagram-scraper-ai1.p.rapidapi.com';
+            document.getElementById('cfgRapidKey').value = localStorage.getItem('INS_RAPIDAPI_KEY') || 'a52da3c122mshd182c011e9f6bbdp1ed9d1jsn1225cccf4cba';
+            document.getElementById('cfgRapidHost').value = localStorage.getItem('INS_RAPIDAPI_HOST') || 'instagram-scraper-stable-api.p.rapidapi.com';
             document.getElementById('cfgGhToken').value = localStorage.getItem('GH_TOKEN') || '';
             document.getElementById('cfgGhOwner').value = localStorage.getItem('GH_OWNER') || '';
             
@@ -561,9 +558,8 @@ def generate_index_template():
 
         function saveConfigAndNotify(e) {
             if (e) { e.preventDefault(); e.stopPropagation(); }
-            // 写入本地存储前也做一次清理，防手滑
             localStorage.setItem('INS_RAPIDAPI_KEY', (document.getElementById('cfgRapidKey').value || '').trim().replace(/[^\x20-\x7E]/g, ''));
-            localStorage.setItem('INS_RAPIDAPI_HOST', (document.getElementById('cfgRapidHost').value || '').trim().replace(/[^\x20-\x7E]/g, '') || 'instagram-scraper-ai1.p.rapidapi.com');
+            localStorage.setItem('INS_RAPIDAPI_HOST', (document.getElementById('cfgRapidHost').value || '').trim().replace(/[^\x20-\x7E]/g, '') || 'instagram-scraper-stable-api.p.rapidapi.com');
             localStorage.setItem('GH_TOKEN', (document.getElementById('cfgGhToken').value || '').trim().replace(/[^\x20-\x7E]/g, ''));
             localStorage.setItem('GH_OWNER', (document.getElementById('cfgGhOwner').value || '').trim().replace(/[^\x20-\x7E]/g, ''));
             
@@ -667,7 +663,6 @@ def generate_index_template():
         initSelects(); forceRender();
 
         async function syncDeleteToGithub(fileRelPath) {
-            // 强制清理非法字符
             const ghToken = (localStorage.getItem('GH_TOKEN') || '').replace(/[^\x20-\x7E]/g, '');
             const ghOwner = (localStorage.getItem('GH_OWNER') || '').replace(/[^\x20-\x7E]/g, '');
             const ghRepo = 'Instagram-File';
@@ -705,36 +700,19 @@ def generate_index_template():
             return null;
         }
 
-        function shortcodeToMediaId(shortcode) {
-            try {
-                const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
-                let id = BigInt(0);
-                for (let i = 0; i < shortcode.length; i++) {
-                    const char = shortcode[i];
-                    const index = alphabet.indexOf(char);
-                    if (index === -1) return null;
-                    id = id * BigInt(64) + BigInt(index);
-                }
-                return id.toString();
-            } catch(e) {
-                return null;
-            }
-        }
-
         document.getElementById('insUrlInput').addEventListener('keypress', async function (e) {
             if (e.key === 'Enter') {
                 const rawUrl = this.value.trim();
                 if (!rawUrl) return;
 
-                // ============== 关键修复：强制移除所有非法 ISO-8859-1 字符 ==============
-                const rapidKey = (localStorage.getItem('INS_RAPIDAPI_KEY') || '').replace(/[^\x20-\x7E]/g, '');
-                const rapidHost = (localStorage.getItem('INS_RAPIDAPI_HOST') || 'instagram-scraper-ai1.p.rapidapi.com').replace(/[^\x20-\x7E]/g, '');
+                const rapidKey = (localStorage.getItem('INS_RAPIDAPI_KEY') || 'a52da3c122mshd182c011e9f6bbdp1ed9d1jsn1225cccf4cba').replace(/[^\x20-\x7E]/g, '');
+                const rapidHost = (localStorage.getItem('INS_RAPIDAPI_HOST') || 'instagram-scraper-stable-api.p.rapidapi.com').replace(/[^\x20-\x7E]/g, '');
                 const ghToken = (localStorage.getItem('GH_TOKEN') || '').replace(/[^\x20-\x7E]/g, '');
                 const ghOwner = (localStorage.getItem('GH_OWNER') || '').replace(/[^\x20-\x7E]/g, '');
                 const ghRepo = 'Instagram-File';
                 
                 if (!rapidKey || !ghToken || !ghOwner) {
-                    alert('⚠️ 请先点击右上角 ⚙️ 配置 Instagram RapidAPI Key 和 GitHub Token！');
+                    alert('⚠️ 请先点击右上角 ⚙️ 配置 GitHub Token 或补充 RapidAPI Key！');
                     openConfigModal();
                     return;
                 }
@@ -750,15 +728,14 @@ def generate_index_template():
                 this.disabled = true;
 
                 try {
-                    let mediaId = shortcodeToMediaId(shortcode);
-
                     let postTitle = `Instagram Post (${shortcode})`;
                     let postChannel = "@instagram_user";
                     let postThumb = "https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png";
                     let postUrl = `https://www.instagram.com/p/${shortcode}/`;
 
+                    // ================= 步骤 1：获取媒体元数据与封面图 =================
                     try {
-                        const pRes = await fetch(`https://${rapidHost}/media_info_from_shortcode/v2/?shortcode-v2=${shortcode}`, {
+                        const pRes = await fetch(`https://${rapidHost}/get_media_data_v2.php?media_code=${shortcode}`, {
                             headers: { 'x-rapidapi-host': rapidHost, 'x-rapidapi-key': rapidKey }
                         });
                         if (pRes.ok) {
@@ -766,26 +743,33 @@ def generate_index_template():
                             const item = pData.items ? pData.items[0] : (pData.data || pData);
                             const node = (item && item.node) ? item.node : item;
                             if (node) {
-                                if (node.id || node.pk) {
-                                    mediaId = String(node.pk || node.id).split('_')[0];
-                                }
+                                // 提取 Caption / Title
                                 if (node.caption) {
                                     postTitle = typeof node.caption === 'string' ? node.caption : (node.caption.text || postTitle);
                                 } else if (node.title) {
                                     postTitle = node.title;
+                                } else if (node.text) {
+                                    postTitle = node.text;
                                 }
-                                const user = node.user || node.owner || {};
+
+                                // 提取作者 Username
+                                const user = node.user || node.owner || node.author || {};
                                 postChannel = '@' + (user.username || 'instagrammer');
                                 
-                                if (node.image_versions2 && node.image_versions2.candidates && node.image_versions2.candidates.length > 0) {
+                                // 提取封面图 (多层级容错)
+                                if (node.thumbnail_url) {
+                                    postThumb = node.thumbnail_url;
+                                } else if (node.display_url) {
+                                    postThumb = node.display_url;
+                                } else if (node.thumbnail_src) {
+                                    postThumb = node.thumbnail_src;
+                                } else if (node.image_versions2 && node.image_versions2.candidates && node.image_versions2.candidates.length > 0) {
                                     postThumb = node.image_versions2.candidates[0].url;
-                                } else if (node.display_uri || node.display_url) {
-                                    postThumb = node.display_uri || node.display_url;
                                 }
                             }
                         }
                     } catch(err) {
-                        console.warn("详情接口受阻，直接使用算法计算的 mediaId 抓取评论:", err);
+                        console.warn("媒体元数据接口受阻，继续尝试抓取评论:", err);
                     }
                     
                     if (typeof postTitle === 'string') {
@@ -797,12 +781,8 @@ def generate_index_template():
 
                     loadingBar.style.width = '55%';
 
-                    if (!mediaId) {
-                        throw new Error(`未能获取到该贴文的 Media ID，请检查链接是否有效！`);
-                    }
-
-                    const cleanMediaId = String(mediaId).split('_')[0];
-                    const cRes = await fetch(`https://${rapidHost}/media/comments/?media_id=${cleanMediaId}`, {
+                    // ================= 步骤 2：获取热门评论列表 =================
+                    const cRes = await fetch(`https://${rapidHost}/get_post_comments.php?media_code=${shortcode}&sort_order=popular`, {
                         headers: { 'x-rapidapi-host': rapidHost, 'x-rapidapi-key': rapidKey }
                     });
                     if (!cRes.ok) throw new Error(`RapidAPI 获取评论失败 (状态码: ${cRes.status})`);
@@ -819,11 +799,11 @@ def generate_index_template():
                     let comments = [];
                     for (let c of rawComments) {
                         const cNode = c.node || c;
-                        const text = cNode.text || '';
+                        const text = cNode.text || cNode.content || '';
                         
-                        // ============== 核心修改：利用正则过滤掉纯表情符号/纯符号 ==============
+                        // 过滤纯表情与纯标点符号
                         if (text && /[\p{L}\p{N}]/u.test(text) && !text.includes('http')) {
-                            const user = cNode.user || cNode.owner || {};
+                            const user = cNode.user || cNode.owner || cNode.author || {};
                             const authorName = user.username || "ins_user";
                             const avatar = user.profile_pic_url || (user.hd_profile_pic_url_info && user.hd_profile_pic_url_info.url) || "https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png";
                             const likes = parseInt(cNode.comment_like_count || cNode.like_count || 0);
@@ -1038,7 +1018,7 @@ def generate_index_template():
     os.makedirs(BASE_DIR, exist_ok=True)
     with open(os.path.join(BASE_DIR, "index.html"), "w", encoding="utf-8") as f:
         f.write(html_template)
-    print("✅ `docs/index.html` Instagram 专用版更新完成！已彻底修复 Header 非法字符崩溃问题并更新短评抓取逻辑。")
+    print("✅ `docs/index.html` 已成功更新为稳定版新 API 接口！")
 
 if __name__ == "__main__":
     generate_index_template()
