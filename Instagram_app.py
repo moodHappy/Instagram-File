@@ -288,7 +288,7 @@ function reconstructSelfHTML() {
     <div class="container">
         <h2 style="text-align: center; margin-bottom: 25px; color: #333;">📅 ${pageData.year}-${String(pageData.month).padStart(2,'0')}-${String(pageData.day).padStart(2,'0')}</h2>
         <div class="post-card">
-            <a href="${escapeHTML(pageData.post.url)}" target="_blank"><img src="${escapeHTML(pageData.post.thumb)}" class="post-thumb" alt="Thumbnail" referrerpolicy="no-referrer"></a>
+            <a href="${escapeHTML(pageData.post.url)}" target="_blank"><img src="${escapeHTML(pageData.post.thumb)}" class="post-thumb" style="min-height: 250px; background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); font-size: 0;" alt="Thumbnail" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://picsum.photos/seed/' + Math.random().toString(36).substr(2, 6) + '/800/600'; this.title='原图已失效，已自动替换为随机美化占位图';"></a>
             <div class="post-info">
                 <span class="p-channel">${escapeHTML(pageData.post.channel)}</span>
                 <h1 class="p-title">${escapeHTML(pageData.post.title)}</h1>
@@ -953,7 +953,7 @@ def generate_index_template():
         .sync-status { padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; display: none; color: #fff; background: #2ea44f; position: absolute; right: 15px; }
         
         .post-card { background: var(--card); border-radius: 18px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.05); margin: 15px; }
-        .post-thumb { width: 100%; max-height: 400px; display: block; object-fit: contain; background: #000; }
+        .post-thumb { width: 100%; max-height: 400px; min-height: 250px; display: block; object-fit: contain; background: var(--ins-btn); }
         .post-info { padding: 15px; }
         .p-channel { font-size: 0.85rem; color: var(--accent); font-weight: 700; margin-bottom: 6px; display: block; }
         .p-title { font-size: 1.05rem; font-weight: 600; margin: 0 0 12px 0; line-height: 1.4; }
@@ -992,7 +992,7 @@ def generate_index_template():
     <div class="container">
         <h2 style="text-align: center; margin-bottom: 20px; color: #333;">📅 ${pageData.year}-${String(pageData.month).padStart(2,'0')}-${String(pageData.day).padStart(2,'0')}</h2>
         <div class="post-card">
-            <a href="${escapeHTML(pageData.post.url)}" target="_blank"><img src="${escapeHTML(pageData.post.thumb)}" class="post-thumb" alt="Thumbnail" referrerpolicy="no-referrer"></a>
+            <a href="${escapeHTML(pageData.post.url)}" target="_blank"><img src="${escapeHTML(pageData.post.thumb)}" class="post-thumb" style="min-height: 250px; background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); font-size: 0;" alt="Thumbnail" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='https://picsum.photos/seed/' + Math.random().toString(36).substr(2, 6) + '/800/600'; this.title='原图已失效，已自动替换为随机美化占位图';"></a>
             <div class="post-info">
                 <span class="p-channel">${escapeHTML(pageData.post.channel)}</span>
                 <h1 class="p-title">${escapeHTML(pageData.post.title)}</h1>
